@@ -1,4 +1,9 @@
-server
-client
-serverClient
-tests/test
+custom/server
+custom/client
+custom/serverClient
+custom/test
+nbproject/
+build/
+dist/
+.dep.inc
+Makefile
