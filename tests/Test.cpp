@@ -63,10 +63,10 @@ int main(int argc, char** argv) {
     
     Sensor* sensors[4];
     
-    sensors[0] = new Sensor("Cheese", addr);
-    sensors[1] = new Sensor("Bread", addr);
-    sensors[2] = new Sensor("Milk", addr);
-    sensors[3] = new Sensor("Orange Juice", addr);
+    sensors[0] = new Sensor("Cheese", addr, 1, 1);
+    sensors[1] = new Sensor("Bread", addr, 1, 1);
+    sensors[2] = new Sensor("Milk", addr, 1, 1);
+    sensors[3] = new Sensor("Orange Juice", addr, 1, 1);
     
     thread* sensorThreads[4];
     
