@@ -21,10 +21,12 @@
 #include "../Server.h"
 #include "../Sensor.h"
 
-#define SERVER_ADDRESS "127.0.0.1"
-#define SERVER_PORT 27015
+#define DEFAULT_ADDRESS "127.0.0.1"
+#define DEFAULT_PORT 27015
 
 using namespace std;
+
+bool messageReceived = false;
 
 void sensorTest(Sensor* sensor) {
     cout << endl << "Testing "  << sensor->getItem() << "-sensor for sent messages" << endl;
@@ -39,24 +41,39 @@ void sensorTest(Sensor* sensor) {
 
 void serverTest(Server server) {
     std::cout << endl << "Testing server for received messages" << std::endl;
-    if(server.hasReceivedMessages()) {
+    if(!messageReceived) {
         cout << "Server did not receive any messages" << endl;
         cout << "Test for server failed" << endl;
         exit(EXIT_FAILURE);
     }
     
-    cout << "Test for sensor was successful" << endl;
+    cout << "Test for server was successful" << endl;
+}
+
+void serverReceivedMessage(string message) {
+    messageReceived = true;
 }
 
 int main(int argc, char** argv) {
     
+    string serverIpAddress;
+    unsigned short serverPort;
+    
+    if(argc == 3) {
+        serverIpAddress = argv[1];
+        serverPort = stoi(argv[2]);
+    } else {
+        serverIpAddress = DEFAULT_ADDRESS;
+        serverPort = DEFAULT_PORT;
+    }
+    
     sockaddr_in addr;
     addr.sin_family = AF_INET;
-    addr.sin_addr.s_addr = inet_addr(SERVER_ADDRESS);
-    addr.sin_port = htons(SERVER_PORT);
+    addr.sin_addr.s_addr = inet_addr(serverIpAddress.c_str());
+    addr.sin_port = htons(serverPort);
     
     Server server(addr);
-    
+    server.addObserver(serverReceivedMessage);
     thread serverThread(&Server::receive, &server);
     
     sleep(1);
@@ -85,8 +102,9 @@ int main(int argc, char** argv) {
     
     serverTest(server);
     
+    cout << endl << "All tests were successful" << endl;
+    
     serverThread.detach();
-
     return (EXIT_SUCCESS);
 }
 

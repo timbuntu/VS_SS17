@@ -16,6 +16,7 @@
 #include "Server.h"
 
 Server::Server(sockaddr_in addr) {
+    receivedMessages.clear();
     sockfd = socket(AF_INET, SOCK_DGRAM, 0);
     if(sockfd >= 0) {
         bound = (bind(sockfd, (sockaddr*)&addr, sizeof(sockaddr_in)) == 0);
@@ -36,9 +37,15 @@ void Server::receive() {
         std::string message(buffer, n);
         receivedMessages.push_back(message);
         std::cout << "Received: " << message << std::endl;
+        notifyObservers(message);
     }
 }
 
-void Server::stop() const {
-    exit(EXIT_SUCCESS);
+void Server::addObserver(void (*observer)(std::string)) {
+    observers.push_back(observer);
+}
+
+void Server::notifyObservers(std::string info) {
+    for(void (*observer)(std::string) : observers)
+        observer(info);
 }

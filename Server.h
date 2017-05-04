@@ -30,13 +30,15 @@ public:
     std::vector<std::string> getReceivedMessages() const { return receivedMessages; }
     bool hasReceivedMessages() { return !receivedMessages.empty(); }
     
-    void stop() const;
+    void addObserver(void (*observer)(std::string));
+    void notifyObservers(std::string info);
     
 private:
     
     int sockfd;
     bool bound;
     std::vector<std::string> receivedMessages;
+    std::vector<void (*)(std::string)> observers;
 };
 
 #endif /* SERVER_H */
