@@ -15,6 +15,7 @@
 #include <iostream>
 #include <thread>
 #include <sys/socket.h>
+#include <sys/time.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
@@ -27,6 +28,18 @@
 using namespace std;
 
 bool messageReceived = false;
+timeval sent, received;
+
+void timeTest() {
+    cout << endl << "Testing processing time for messages" << endl;
+    unsigned long delta = (received.tv_sec*1000000+received.tv_usec) - (sent.tv_sec*1000000+sent.tv_usec);
+    cout << "Processing of message took " << delta << " microseconds" << endl;
+    if(delta > 100000) {
+        cout << "Processing time was over 100 milliseconds, test failed." << endl;
+        exit(EXIT_FAILURE);
+    }
+    cout << "Test for processing time was successful" << endl;
+}
 
 void sensorTest(Sensor* sensor) {
     cout << endl << "Testing "  << sensor->getItem() << "-sensor for sent messages" << endl;
@@ -51,7 +64,10 @@ void serverTest(Server server) {
 }
 
 void serverReceivedMessage(string message) {
-    messageReceived = true;
+    if(!messageReceived) {
+        messageReceived = true;
+        gettimeofday(&received, NULL);
+    }
 }
 
 int main(int argc, char** argv) {
@@ -74,6 +90,7 @@ int main(int argc, char** argv) {
     
     Server server(addr);
     server.addObserver(serverReceivedMessage);
+    
     thread serverThread(&Server::receive, &server);
     
     sleep(1);
@@ -87,6 +104,7 @@ int main(int argc, char** argv) {
     
     thread* sensorThreads[4];
     
+    gettimeofday(&sent, NULL);
     sensorThreads[0] = new thread(&Sensor::send, sensors[0]);
     sensorThreads[1] = new thread(&Sensor::send, sensors[1]);
     sensorThreads[2] = new thread(&Sensor::send, sensors[2]);
@@ -101,6 +119,8 @@ int main(int argc, char** argv) {
         sensorTest(sensors[i]);
     
     serverTest(server);
+    
+    timeTest();
     
     cout << endl << "All tests were successful" << endl;
     
