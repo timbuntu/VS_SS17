@@ -44,7 +44,7 @@ void Sensor::send() {
             else
                 reading = 0;
             
-            std::string message = item + ": " + std::to_string(reading);
+            std::string message = item + "=" + std::to_string(reading);
             sendto(sockfd, message.c_str(), message.length(), 0, (sockaddr*)&serverAddr, sizeof(sockaddr_in));
             sentMessages.push_back(message);
         }

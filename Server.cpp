@@ -35,7 +35,10 @@ void Server::receive() {
         int n = recv(sockfd, buffer, 4096, 0);
         std::string message(buffer, n);
         receivedMessages.push_back(message);
-        std::cout << message << std::endl;
-        //std::cout << "Message received" << std::endl;
+        std::cout << "Received: " << message << std::endl;
     }
+}
+
+void Server::stop() const {
+    exit(EXIT_SUCCESS);
 }

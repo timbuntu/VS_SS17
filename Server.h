@@ -27,7 +27,10 @@ public:
     virtual ~Server();
     
     void receive();
-    std::vector<std::string> getReceivedMessages() { return receivedMessages; }
+    std::vector<std::string> getReceivedMessages() const { return receivedMessages; }
+    bool hasReceivedMessages() { return !receivedMessages.empty(); }
+    
+    void stop() const;
     
 private:
     

@@ -39,7 +39,7 @@ void sensorTest(Sensor* sensor) {
 
 void serverTest(Server server) {
     std::cout << endl << "Testing server for received messages" << std::endl;
-    if(server.getReceivedMessages().empty()) {
+    if(server.hasReceivedMessages()) {
         cout << "Server did not receive any messages" << endl;
         cout << "Test for server failed" << endl;
         exit(EXIT_FAILURE);
