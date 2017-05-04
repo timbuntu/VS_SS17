@@ -9,16 +9,16 @@ all:runTest server client serverClient
 notest:server client serverClient
 
 run:serverClient
-	./serverClient
+	./serverClient $(IP) $(PORT)
 
 runServer:server
-	./server
+	./server $(IP) $(PORT)
 
 runClient:client
-	./client
+	./client $(IP) $(PORT)
 
 runTest:test
-	./test
+	./test $(IP) $(PORT)
 
 test:$(srcTest)
 	g++ -std=c++11 -pthread $(srcTest) -o test

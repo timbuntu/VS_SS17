@@ -17,8 +17,8 @@
 
 #include "Server.h"
 
-#define SERVER_ADDRESS "127.0.0.1"
-#define SERVER_PORT 27015
+#define DEFAULT_ADDRESS "127.0.0.1"
+#define DEFAULT_PORT 27015
 
 using namespace std;
 
@@ -27,10 +27,21 @@ using namespace std;
  */
 int main(int argc, char** argv) {
     
+    string serverIpAddress;
+    unsigned short serverPort;
+    
+    if(argc == 3) {
+        serverIpAddress = argv[1];
+        serverPort = stoi(argv[2]);
+    } else {
+        serverIpAddress = DEFAULT_ADDRESS;
+        serverPort = DEFAULT_PORT;
+    }
+    
     sockaddr_in addr;
     addr.sin_family = AF_INET;
-    addr.sin_addr.s_addr = inet_addr(SERVER_ADDRESS);
-    addr.sin_port = htons(SERVER_PORT);
+    addr.sin_addr.s_addr = inet_addr(serverIpAddress.c_str());
+    addr.sin_port = htons(serverPort);
     
     Server server(addr);
     server.receive();
