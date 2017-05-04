@@ -14,6 +14,10 @@ client: build the client
 serverClient: build an application containing server and client
 clean: remove build-files
 
+Configure ip and port used for run-targets using IP=x.x.x.x and PORT=x
+
+The executables can be provided with a ip and port as commandline options.
+
 Configuration for netbeans:
 Exclude startServer.cpp and startSensors.cpp from build, 
 Compiler C++ Standard C++11, 
