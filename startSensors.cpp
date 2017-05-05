@@ -46,7 +46,7 @@ int main(int argc, char** argv) {
     
     thread* sensorThreads[4];
     
-    sensorThreads[0] = new thread(&Sensor::send, new Sensor("Cheese", addr));
+    sensorThreads[0] = new thread(&Sensor::send, new Sensor("Käse", addr));
     sensorThreads[1] = new thread(&Sensor::send, new Sensor("Bread", addr));
     sensorThreads[2] = new thread(&Sensor::send, new Sensor("Milk", addr));
     sensorThreads[3] = new thread(&Sensor::send, new Sensor("Orange Juice", addr));

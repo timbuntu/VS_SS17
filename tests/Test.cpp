@@ -14,6 +14,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <thread>
+#include <vector>
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <netinet/in.h>
@@ -29,6 +30,27 @@ using namespace std;
 
 bool messageReceived = false;
 timeval sent, received;
+vector<string> receivedMessages;
+
+bool wasMessageReceived(string message) {
+    for(string receivedMessage : receivedMessages)
+        if(receivedMessage == message)
+            return true;
+    
+    return false;
+}
+
+void integrityTest() {
+    cout << endl << "Testing integrity of received messages" << endl;
+    
+    if(!(wasMessageReceived("Käse=0") && wasMessageReceived("Bread=0") 
+                                          && wasMessageReceived("Milk=0") && wasMessageReceived("Orange Juice=0"))) {
+        
+        cout << "Test of integrity failed" << endl;
+        exit(EXIT_FAILURE);
+    }
+    cout << "Test for integrity was successful" << endl;
+}
 
 void timeTest() {
     cout << endl << "Testing processing time for messages" << endl;
@@ -68,6 +90,7 @@ void serverReceivedMessage(string message) {
         messageReceived = true;
         gettimeofday(&received, NULL);
     }
+    receivedMessages.push_back(message);
 }
 
 int main(int argc, char** argv) {
@@ -97,7 +120,7 @@ int main(int argc, char** argv) {
     
     Sensor* sensors[4];
     
-    sensors[0] = new Sensor("Cheese", addr, 1, 1);
+    sensors[0] = new Sensor("Käse", addr, 1, 1);
     sensors[1] = new Sensor("Bread", addr, 1, 1);
     sensors[2] = new Sensor("Milk", addr, 1, 1);
     sensors[3] = new Sensor("Orange Juice", addr, 1, 1);
@@ -121,6 +144,8 @@ int main(int argc, char** argv) {
     serverTest(server);
     
     timeTest();
+    
+    integrityTest();
     
     cout << endl << "All tests were successful" << endl;
     
