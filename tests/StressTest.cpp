@@ -31,9 +31,11 @@ unsigned int receivedMessageCount = 0;
 
 void serverReceivedMessage(string message) {
     receivedMessageCount++;
+    cout << "Message Received" << endl;
 }
 
 thread* init(string serverIp, unsigned short serverPort) {
+    
     addr.sin_family = AF_INET;
     addr.sin_addr.s_addr = inet_addr(serverIp.c_str());
     addr.sin_port = htons(serverPort);
@@ -42,6 +44,26 @@ thread* init(string serverIp, unsigned short serverPort) {
     server.addObserver(serverReceivedMessage);
     
     return new thread(&Server::receive, &server);
+}
+
+void loadTest() {
+    cout << endl << "Testing behavior under heavy load" << endl;
+    receivedMessageCount = 0;
+    thread* threads[1000];
+    for(int i = 0; i < 1000; i++)
+        threads[i] = new thread(&Sensor::send, new Sensor(to_string(i), addr, 10, 1));
+    
+    for(thread* sensorThread : threads)
+        sensorThread->join();
+    
+    sleep(1);
+    
+    if(receivedMessageCount < 1000*10) {
+        cout << "Server overloaded, only " << receivedMessageCount << " received, test failed" << endl;
+        exit(EXIT_FAILURE);
+    }
+    
+    cout << "Test successful" << endl;
 }
 
 int main(int argc, char** argv) {
@@ -53,27 +75,10 @@ int main(int argc, char** argv) {
     else
         serverThread = init(DEFAULT_ADDRESS, DEFAULT_PORT);
     
-    
-    
     sleep(1);
     
-    Sensor* sensors[4];
+    loadTest();
     
-    sensors[0] = new Sensor("Käse", addr, 1, 1);
-    sensors[1] = new Sensor("Bread", addr, 1, 1);
-    sensors[2] = new Sensor("Milk", addr, 1, 1);
-    sensors[3] = new Sensor("Orange Juice", addr, 1, 1);
-    
-    thread* sensorThreads[4];
-    sensorThreads[0] = new thread(&Sensor::send, sensors[0]);
-    sensorThreads[1] = new thread(&Sensor::send, sensors[1]);
-    sensorThreads[2] = new thread(&Sensor::send, sensors[2]);
-    sensorThreads[3] = new thread(&Sensor::send, sensors[3]);
-    
-    for(int i = 0; i < 4; i++) 
-        sensorThreads[i]->join();
-    
-    sleep(1);
     
     cout << endl << "All tests were successful" << endl;
     

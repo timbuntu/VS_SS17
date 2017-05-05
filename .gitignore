@@ -2,6 +2,7 @@ custom/server
 custom/client
 custom/serverClient
 custom/test
+custom/stressTest
 nbproject/
 build/
 dist/

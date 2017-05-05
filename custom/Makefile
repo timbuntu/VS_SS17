@@ -21,6 +21,9 @@ runClient:client
 runTest:test
 	./test $(IP) $(PORT)
 
+runStressTest:stressTest
+	./stressTest $(IP) $(PORT)
+
 test:$(srcTest)
 	g++ -std=c++11 -pthread $(srcTest) -o test
 
@@ -37,4 +40,4 @@ serverClient:$(src)
 	g++ -std=c++11 -pthread $(src) -o serverClient
 
 clean:
-	rm -f server client serverClient test
+	rm -f server client serverClient test stressTest
