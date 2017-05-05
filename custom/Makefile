@@ -3,6 +3,7 @@ src=../main.cpp $(classes)
 srcServer=../startServer.cpp $(classes)
 srcClient=../startSensors.cpp $(classes)
 srcTest=../tests/Test.cpp $(classes)
+srcStressTest=../tests/StressTest.cpp $(classes)
 
 all:runTest server client serverClient
 
@@ -22,6 +23,9 @@ runTest:test
 
 test:$(srcTest)
 	g++ -std=c++11 -pthread $(srcTest) -o test
+
+stressTest:$(srcStressTest)
+	g++ -std=c++11 -pthread $(srcStressTest) -o stressTest
 
 server:$(srcServer)
 	g++ -std=c++11 -pthread $(srcServer) -o server
