@@ -12,10 +12,14 @@
  */
 
 #include <unistd.h>
+#include <arpa/inet.h>
 
 #include "Server.h"
 
 Server::Server(sockaddr_in addr) {
+    char addr_str[INET_ADDRSTRLEN];
+    inet_ntop(AF_INET, &addr.sin_addr, addr_str, INET_ADDRSTRLEN);
+    std::cout << "Server listening on " << addr_str << ":" << std::to_string(ntohs(addr.sin_port)) << std::endl;
     receivedMessages.clear();
     sockfd = socket(AF_INET, SOCK_DGRAM, 0);
     if(sockfd >= 0) {

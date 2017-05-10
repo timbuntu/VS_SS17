@@ -27,10 +27,13 @@
 using namespace std;
 
 sockaddr_in addr;
+string lastMessage;
 unsigned int receivedMessageCount = 0;
+Server* server = nullptr;
 
 void serverReceivedMessage(string message) {
     receivedMessageCount++;
+    lastMessage = message;
     cout << "Message Received" << endl;
 }
 
@@ -40,10 +43,10 @@ thread* init(string serverIp, unsigned short serverPort) {
     addr.sin_addr.s_addr = inet_addr(serverIp.c_str());
     addr.sin_port = htons(serverPort);
     
-    Server server(addr);
-    server.addObserver(serverReceivedMessage);
+    server = new Server(addr);
+    server->addObserver(serverReceivedMessage);
     
-    return new thread(&Server::receive, &server);
+    return new thread(&Server::receive, server);
 }
 
 void loadTest() {
@@ -51,16 +54,36 @@ void loadTest() {
     receivedMessageCount = 0;
     thread* threads[1000];
     for(int i = 0; i < 1000; i++)
-        threads[i] = new thread(&Sensor::send, new Sensor(to_string(i), addr, 10, 1));
+        threads[i] = new thread(&Sensor::send, new Sensor(to_string(i), addr, 10, -1));
     
     for(thread* sensorThread : threads)
         sensorThread->join();
     
+    sleep(5);
+    
+    if(receivedMessageCount < (1000*10)*0,95) {
+        cout << "Server overloaded, only " << receivedMessageCount << " of 10000 received, test failed" << endl;
+        //exit(EXIT_FAILURE);
+        return;
+    }
+    
+    cout << "Test successful" << endl;
+}
+
+void lengthTest() {
+    cout << endl << "Testing behaviour when sending of long messages" << endl;
+    string longString = "";
+    for(int i = 0; i < 10000; i++)
+        longString += "A";
+    
+    thread sensorThread(&Sensor::send, new Sensor(longString, addr, 1, -1));
+    sensorThread.join();
     sleep(1);
     
-    if(receivedMessageCount < 1000*10) {
-        cout << "Server overloaded, only " << receivedMessageCount << " received, test failed" << endl;
-        exit(EXIT_FAILURE);
+    if(lastMessage != (longString + "=0")) {
+        cout << "Message wasn't transmitted correctly, test failed" << endl;
+        //exit(EXIT_FAILURE);
+        return;
     }
     
     cout << "Test successful" << endl;
@@ -78,9 +101,8 @@ int main(int argc, char** argv) {
     sleep(1);
     
     loadTest();
+    lengthTest();
     
-    
-    cout << endl << "All tests were successful" << endl;
     
     serverThread->detach();
     return (EXIT_SUCCESS);
