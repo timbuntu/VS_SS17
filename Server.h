@@ -14,8 +14,10 @@
 #ifndef SERVER_H
 #define SERVER_H
 
+#include <unistd.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -23,7 +25,6 @@
 class Server {
 public:
     Server(sockaddr_in addr);
-    Server(const Server& orig);
     virtual ~Server();
     
     void receive();

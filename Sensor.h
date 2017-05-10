@@ -26,7 +26,6 @@ class Sensor {
 public:
     Sensor(std::string, sockaddr_in addr);
     Sensor(std::string, sockaddr_in addr, unsigned int startingValue, int steps);
-    Sensor(const Sensor& orig);
     virtual ~Sensor();
     
     void send();
@@ -42,6 +41,7 @@ private:
     unsigned int reading;
     int steps;
     std::vector<std::string> sentMessages;
+    const bool manual;
 
 };
 

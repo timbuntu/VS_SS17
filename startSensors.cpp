@@ -44,15 +44,17 @@ int main(int argc, char** argv) {
     addr.sin_addr.s_addr = inet_addr(serverIpAddress.c_str());
     addr.sin_port = htons(serverPort);
     
+    Sensor* sensors[] = {new Sensor("Käse", addr), new Sensor("Bread", addr), new Sensor("Milk", addr), new Sensor("Orange Juice", addr)};
     thread* sensorThreads[4];
     
-    sensorThreads[0] = new thread(&Sensor::send, new Sensor("Käse", addr));
-    sensorThreads[1] = new thread(&Sensor::send, new Sensor("Bread", addr));
-    sensorThreads[2] = new thread(&Sensor::send, new Sensor("Milk", addr));
-    sensorThreads[3] = new thread(&Sensor::send, new Sensor("Orange Juice", addr));
+    for(int i = 0; i < 4; i++)
+        sensorThreads[i] = new thread(&Sensor::send, sensors[i]);
     
     for(int i = 0; i < 4; i++)
         sensorThreads[i]->join();
+    
+    for(Sensor* sensor : sensors)
+        delete sensor;
     
     return 0;
 }

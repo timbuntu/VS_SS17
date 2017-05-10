@@ -15,26 +15,32 @@
 
 #include "Sensor.h"
 
-Sensor::Sensor(std::string item, sockaddr_in addr) {
+Sensor::Sensor(std::string item, sockaddr_in addr) 
+: manual(false)
+{
     this->item = item;
     serverAddr = addr;
     sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+    int optionValue = 1;
+    setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &optionValue, sizeof(int));
     reading = rand() % 100;
     steps = -3;
 }
 
-Sensor::Sensor(std::string item, sockaddr_in addr, unsigned int startingValue, int steps) {
+Sensor::Sensor(std::string item, sockaddr_in addr, unsigned int startingValue, int steps) 
+: manual(true)
+{
     this->item = item;
     serverAddr = addr;
     sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+    int optionValue = 1;
+    setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &optionValue, sizeof(int));
     reading = startingValue;
     this->steps = steps;
 }
 
-Sensor::Sensor(const Sensor& orig) {
-}
-
 Sensor::~Sensor() {
+    close(sockfd);
 }
 
 void Sensor::send() {
@@ -43,9 +49,11 @@ void Sensor::send() {
         char addr_str[INET_ADDRSTRLEN];
         inet_ntop(AF_INET, &serverAddr.sin_addr, addr_str, INET_ADDRSTRLEN);
         std::cout << "Sensor sending to " << addr_str << ":" << std::to_string(ntohs(serverAddr.sin_port)) << std::endl;
-        while(reading > 0) {
+        while(!manual || reading > 0) {
             
-            if(reading >= -steps)
+            if(reading == 0)
+                reading = rand() % 100;
+            else if(reading >= -steps)
                 reading += steps;
             else
                 reading = 0;
@@ -53,6 +61,8 @@ void Sensor::send() {
             std::string message = item + "=" + std::to_string(reading);
             sendto(sockfd, message.c_str(), message.length(), 0, (sockaddr*)&serverAddr, sizeof(sockaddr_in));
             sentMessages.push_back(message);
+            if(!manual)
+                sleep(1);
             //std::cout << "Sent: " << message << std::endl;
         }
     }

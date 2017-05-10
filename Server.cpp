@@ -11,9 +11,6 @@
  * Created on 20. April 2017, 10:29
  */
 
-#include <unistd.h>
-#include <arpa/inet.h>
-
 #include "Server.h"
 
 Server::Server(sockaddr_in addr) {
@@ -22,16 +19,15 @@ Server::Server(sockaddr_in addr) {
     std::cout << "Server listening on " << addr_str << ":" << std::to_string(ntohs(addr.sin_port)) << std::endl;
     receivedMessages.clear();
     sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+    int optionValue = 1;
+    setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &optionValue, sizeof(int));
     if(sockfd >= 0) {
         bound = (bind(sockfd, (sockaddr*)&addr, sizeof(sockaddr_in)) == 0);
     }
 }
 
-Server::Server(const Server& orig) {
-    
-}
-
 Server::~Server() {
+    close(sockfd);
 }
 
 void Server::receive() {
