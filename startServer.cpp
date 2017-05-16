@@ -14,8 +14,10 @@
 #include <cstdlib>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <thread>
 
 #include "Server.h"
+#include "HttpServer.h"
 
 #define DEFAULT_ADDRESS "127.0.0.1"
 #define DEFAULT_PORT 27015
@@ -44,7 +46,16 @@ int main(int argc, char** argv) {
     addr.sin_port = htons(serverPort);
     
     Server server(addr);
-    server.receive();
+    
+    addr.sin_port = htons(15000);
+    
+    HttpServer httpServer(addr);
+    
+    //thread serverThread(&Server::receive, server);
+    //thread httpServerThread(&HttpServer::start, httpServer);
+    httpServer.start();
+    //serverThread.join();
+    //httpServerThread.join();
     
     return 0;
 }

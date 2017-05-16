@@ -33,6 +33,11 @@ public:
     std::string getItem() const { return item; }
     std::vector<std::string> getSentMessages() const { return sentMessages; }
     
+    struct ItemInfo {
+        char* name;
+        unsigned int reading;
+    };
+    
 private:
     
     sockaddr_in serverAddr;

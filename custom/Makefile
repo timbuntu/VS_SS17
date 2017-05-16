@@ -1,4 +1,4 @@
-classes=../Sensor.cpp ../Server.cpp
+classes=../Sensor.cpp ../Server.cpp ../HttpServer.cpp
 src=../main.cpp $(classes)
 srcServer=../startServer.cpp $(classes)
 srcClient=../startSensors.cpp $(classes)
@@ -40,4 +40,4 @@ serverClient:$(src)
 	g++ -std=c++11 -pthread $(src) -o serverClient
 
 clean:
-	rm -f server client serverClient test stressTest
+	rm -f server client serverClient test stressTest res/*

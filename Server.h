@@ -19,6 +19,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <iostream>
+#include <fstream>
 #include <string>
 #include <vector>
 
@@ -29,10 +30,10 @@ public:
     
     void receive();
     std::vector<std::string> getReceivedMessages() const { return receivedMessages; }
-    bool hasReceivedMessages() { return !receivedMessages.empty(); }
+    bool hasReceivedMessages() const { return !receivedMessages.empty(); }
     
     void addObserver(void (*observer)(std::string));
-    void notifyObservers(std::string info);
+    void notifyObservers(std::string info) const;
     
 private:
     
@@ -40,6 +41,8 @@ private:
     bool bound;
     std::vector<std::string> receivedMessages;
     std::vector<void (*)(std::string)> observers;
+    
+    void saveReading(std::string message);
 };
 
 #endif /* SERVER_H */

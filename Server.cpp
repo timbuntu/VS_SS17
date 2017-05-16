@@ -22,6 +22,8 @@ Server::Server(sockaddr_in addr) {
     int optionValue = 1;
     setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &optionValue, sizeof(int));
     if(sockfd >= 0) {
+        int optionValue = 1;
+        setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &optionValue, sizeof(int));
         bound = (bind(sockfd, (sockaddr*)&addr, sizeof(sockaddr_in)) == 0);
     }
 }
@@ -35,8 +37,8 @@ void Server::receive() {
         char* buffer = new char[4096];
         int n = recv(sockfd, buffer, 4096, 0);
         std::string message(buffer, n);
-        receivedMessages.push_back(message);
         std::cout << "Received: " << message << std::endl;
+        saveReading(message);
         notifyObservers(message);
     }
 }
@@ -45,7 +47,20 @@ void Server::addObserver(void (*observer)(std::string)) {
     observers.push_back(observer);
 }
 
-void Server::notifyObservers(std::string info) {
+void Server::notifyObservers(std::string info) const {
     for(void (*observer)(std::string) : observers)
         observer(info);
+}
+
+void Server::saveReading(std::string message) {
+    receivedMessages.push_back(message);
+    std::ofstream file;
+    file.open("res/history", std::ios::out | std::ios::app);
+    file << message << std::endl;
+    file.close();
+    
+    int pos = message.find('=');
+    file.open("res/" + message.substr(0, pos));
+    file << message.substr(pos+1, message.length()-pos);
+    file.close();
 }
