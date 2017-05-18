@@ -18,21 +18,27 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
+#include <arpa/inet.h>
 #include <string>
 #include <iostream>
+#include <list>
+
+#include "RESTManager.h"
 
 class HttpServer {
 public:
-    HttpServer(sockaddr_in addr);
+    HttpServer(sockaddr_in, RESTManager);
     virtual ~HttpServer();
     
     void start();
 private:
     int sockfd;
     bool bound;
+    sockaddr_in addr;
+    RESTManager manager;
     
     void connectionHandler(int sockfd, sockaddr_in* clientAddr);
-    std::string createTable() const;
+    std::string createTables() const;
 };
 
 #endif /* HTTPSERVER_H */

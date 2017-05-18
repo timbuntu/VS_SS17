@@ -22,10 +22,11 @@
 #include <fstream>
 #include <string>
 #include <vector>
+#include "RESTManager.h"
 
 class Server {
 public:
-    Server(sockaddr_in addr);
+    Server(sockaddr_in addr, RESTManager manager);
     virtual ~Server();
     
     void receive();
@@ -39,6 +40,8 @@ private:
     
     int sockfd;
     bool bound;
+    sockaddr_in addr;
+    RESTManager manager;
     std::vector<std::string> receivedMessages;
     std::vector<void (*)(std::string)> observers;
     

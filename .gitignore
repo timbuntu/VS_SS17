@@ -9,3 +9,4 @@ dist/
 .dep.inc
 Makefile
 custom/res/*
+res

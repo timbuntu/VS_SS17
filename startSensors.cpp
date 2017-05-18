@@ -44,7 +44,7 @@ int main(int argc, char** argv) {
     addr.sin_addr.s_addr = inet_addr(serverIpAddress.c_str());
     addr.sin_port = htons(serverPort);
     
-    Sensor* sensors[] = {new Sensor("Käse", addr), new Sensor("Bread", addr), new Sensor("Milk", addr), new Sensor("Orange Juice", addr)};
+    Sensor* sensors[] = {new Sensor("Käse", addr), new Sensor("Bread", addr), new Sensor("Milk", addr), new Sensor("Juice", addr)};
     thread* sensorThreads[4];
     
     for(int i = 0; i < 4; i++)

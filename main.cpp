@@ -20,6 +20,7 @@
 #include <unistd.h>
 #include "Server.h"
 #include "Sensor.h"
+#include "HttpServer.h"
 
 #define DEFAULT_ADDRESS "127.0.0.1"
 #define DEFAULT_PORT 27015
@@ -42,18 +43,28 @@ int main(int argc, char** argv) {
         serverPort = DEFAULT_PORT;
     }
     
+    string resources[] = {"Käse", "Bread", "Milk", "Juice", "history"};
+    
+    RESTManager manager(resources, 5);
+    manager.initStructure();
     
     sockaddr_in addr;
     addr.sin_family = AF_INET;
     addr.sin_addr.s_addr = inet_addr(serverIpAddress.c_str());
+    addr.sin_port = htons(15000);
+    
+    HttpServer* httpServer = new HttpServer(addr, manager);
+    
     addr.sin_port = htons(serverPort);
     
-    Server* server = new Server(addr);
+    Server* server = new Server(addr, manager);
+    
     thread serverThread(&Server::receive, server);
+    thread httpServerThread(&HttpServer::start, httpServer);
     
     sleep(1);
     
-    Sensor* sensors[] = {new Sensor("Käse", addr), new Sensor("Bread", addr), new Sensor("Milk", addr), new Sensor("Orange Juice", addr)};
+    Sensor* sensors[] = {new Sensor("Käse", addr), new Sensor("Bread", addr), new Sensor("Milk", addr), new Sensor("Juice", addr)};
     thread* sensorThreads[4];
     
     for(int i = 0; i < 4; i++)
@@ -62,7 +73,8 @@ int main(int argc, char** argv) {
     for(int i = 0; i < 4; i++)
         sensorThreads[i]->join();
     
-    serverThread.detach();
+    serverThread.join();
+    httpServerThread.join();
     
     delete server;
     for(Sensor* sensor : sensors)

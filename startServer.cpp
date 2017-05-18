@@ -15,7 +15,9 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <thread>
+#include <string.h>
 
+#include "RESTManager.h"
 #include "Server.h"
 #include "HttpServer.h"
 
@@ -24,9 +26,6 @@
 
 using namespace std;
 
-/*
- * 
- */
 int main(int argc, char** argv) {
     
     string serverIpAddress;
@@ -40,22 +39,29 @@ int main(int argc, char** argv) {
         serverPort = DEFAULT_PORT;
     }
     
+    string resources[] = {"Käse", "Bread", "Milk", "Juice", "history"};
+    
+    RESTManager manager(resources, 5);
+    manager.initStructure();
+    
     sockaddr_in addr;
     addr.sin_family = AF_INET;
     addr.sin_addr.s_addr = inet_addr(serverIpAddress.c_str());
     addr.sin_port = htons(serverPort);
     
-    Server server(addr);
+    Server* server = new Server(addr, manager);
     
     addr.sin_port = htons(15000);
     
-    HttpServer httpServer(addr);
+    HttpServer* httpServer = new HttpServer(addr, manager);
     
-    //thread serverThread(&Server::receive, server);
-    //thread httpServerThread(&HttpServer::start, httpServer);
-    httpServer.start();
-    //serverThread.join();
-    //httpServerThread.join();
+    sleep(1);
+    thread serverThread(&Server::receive, server);
+    thread httpServerThread(&HttpServer::start, httpServer);
+    
+    
+    serverThread.join();
+    httpServerThread.join();
     
     return 0;
 }

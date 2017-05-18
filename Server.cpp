@@ -13,11 +13,10 @@
 
 #include "Server.h"
 
-Server::Server(sockaddr_in addr) {
-    char addr_str[INET_ADDRSTRLEN];
-    inet_ntop(AF_INET, &addr.sin_addr, addr_str, INET_ADDRSTRLEN);
-    std::cout << "Server listening on " << addr_str << ":" << std::to_string(ntohs(addr.sin_port)) << std::endl;
-    receivedMessages.clear();
+Server::Server(sockaddr_in addr, RESTManager manager) {
+    
+    this->addr = addr;
+    this->manager = manager;
     sockfd = socket(AF_INET, SOCK_DGRAM, 0);
     int optionValue = 1;
     setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &optionValue, sizeof(int));
@@ -33,6 +32,14 @@ Server::~Server() {
 }
 
 void Server::receive() {
+    if(bound) {
+        char addr_str[INET_ADDRSTRLEN];
+        inet_ntop(AF_INET, &addr.sin_addr, addr_str, INET_ADDRSTRLEN);
+        std::cout << "Server listening on " << addr_str << ":" << std::to_string(ntohs(addr.sin_port)) << std::endl;
+    } else {
+        std::cout << "Server socket not bound" << std::endl;
+    }
+    
     while(bound) {
         char* buffer = new char[4096];
         int n = recv(sockfd, buffer, 4096, 0);
@@ -54,13 +61,8 @@ void Server::notifyObservers(std::string info) const {
 
 void Server::saveReading(std::string message) {
     receivedMessages.push_back(message);
-    std::ofstream file;
-    file.open("res/history", std::ios::out | std::ios::app);
-    file << message << std::endl;
-    file.close();
-    
     int pos = message.find('=');
-    file.open("res/" + message.substr(0, pos));
-    file << message.substr(pos+1, message.length()-pos);
-    file.close();
+    
+    manager.put("history", message, true);
+    manager.put(message.substr(0, pos), message.substr(pos+1, message.length()-pos));
 }
