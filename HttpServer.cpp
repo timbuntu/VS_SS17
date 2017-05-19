@@ -53,8 +53,11 @@ void HttpServer::connectionHandler(int sockfd, sockaddr_in* clientAddr) {
     std::cout << "Received message: " << std::endl << message << std::endl;
     std::string html = "<html><header><meta http-equiv=\"refresh\" content=\"1\" /><title>Test</title></header><body>" + createTables() + "</body></html>";
     std::string response = "HTTP/1.1 200 OK\r\nContent-Length: " + std::to_string(html.length()) + "\r\nContent-Type: text/html\r\nConnection: close\r\n\r\n" + html;
-    send(sockfd, response.c_str(), response.length(), 0);
-    std::cout << "Message sent" << std::endl;
+    
+    if(string(message).find("GET") != string::npos) {
+        send(sockfd, response.c_str(), response.length(), 0);
+        std::cout << "Message sent" << std::endl;
+    }
     close(sockfd);
 }
 
@@ -63,8 +66,11 @@ std::string HttpServer::createTables() const {
     std::list<string> items = manager.get(INDEX_NAME);
     items.remove("history");
     for(string item : items) {
-        if(manager.get(item).size() > 0)
+        if(manager.get(item).size() > 0) {
             table += "<tr><td>" + item + "</td><td>" + manager.get(item).front() + "</td></tr>";
+             if (table.find("ä") != string::npos)
+                table.replace(table.find("ä"), 2, "&auml;");
+        }
     }
     table += "</table>";
     
@@ -76,6 +82,8 @@ std::string HttpServer::createTables() const {
         string amount = entry.substr(pos+1, entry.length()-pos);
         
         table += "<tr><td>" + name + "</td><td>" + amount + "</td></tr>";
+        if (table.find("ä") != string::npos)
+                table.replace(table.find("ä"), 2, "&auml;");
     }
     table += "</table>";
     

@@ -22,6 +22,8 @@
 #include <unistd.h>
 #include "../Server.h"
 #include "../Sensor.h"
+#include "../RESTManager.h"
+#include "../HttpServer.h"
 
 #define DEFAULT_ADDRESS "127.0.0.1"
 #define DEFAULT_PORT 27015
@@ -93,6 +95,26 @@ void serverReceivedMessage(string message) {
     receivedMessages.push_back(message);
 }
 
+void httpResponse(sockaddr_in addr) {
+    std::cout << endl << "Checking for HttpServer response" << std::endl;
+    int sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    connect(sockfd, (sockaddr*)&addr, sizeof(addr));
+    
+    char addr_str[INET_ADDRSTRLEN];
+    inet_ntop(AF_INET, &addr.sin_addr, addr_str, INET_ADDRSTRLEN);
+    std::cout << "HttpServer listening on " << addr_str << ":" << std::to_string(ntohs(addr.sin_port)) << std::endl;
+    
+    string request = "GET " + string(addr_str) + " HTTP/1.1";
+    char response[4096];
+    
+    send(sockfd, request.c_str(), request.length(), NULL);
+    recv(sockfd, response, 4096, NULL);
+    if(string(response).find("HTTP/1.1") == string::npos) {
+        cout << "Test failed, didn't receive Http response" << endl;
+        exit(EXIT_FAILURE);
+    }
+}
+
 int main(int argc, char** argv) {
     
     string serverIpAddress;
@@ -106,15 +128,25 @@ int main(int argc, char** argv) {
         serverPort = DEFAULT_PORT;
     }
     
+    string resources[] = {"Käse", "Bread", "Milk", "Juice", "history"};
+    
+    RESTManager manager(resources, 5);
+    manager.initStructure();
+    
     sockaddr_in addr;
     addr.sin_family = AF_INET;
     addr.sin_addr.s_addr = inet_addr(serverIpAddress.c_str());
     addr.sin_port = htons(serverPort);
     
-    Server server(addr);
+    sockaddr_in addrHttpServer = addr;
+    addrHttpServer.sin_port = htons(serverPort);
+    
+    Server server(addr, manager);
     server.addObserver(serverReceivedMessage);
+    HttpServer httpServer(addrHttpServer, manager);
     
     thread serverThread(&Server::receive, &server);
+    thread httpServerThread(&HttpServer::start, &httpServer);
     
     sleep(1);
     
@@ -147,9 +179,12 @@ int main(int argc, char** argv) {
     
     integrityTest();
     
+    httpResponse(addr);
+    
     cout << endl << "All tests were successful" << endl;
     
     serverThread.detach();
+    httpServerThread.detach();
     return (EXIT_SUCCESS);
 }
 
