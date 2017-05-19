@@ -38,12 +38,17 @@ void serverReceivedMessage(string message) {
 }
 
 thread* init(string serverIp, unsigned short serverPort) {
-    
+
+    string resources[] = {"Käse", "Bread", "Milk", "Juice", "history"};
+
+    RESTManager manager(resources, 5);
+    manager.initStructure();
+
     addr.sin_family = AF_INET;
     addr.sin_addr.s_addr = inet_addr(serverIp.c_str());
     addr.sin_port = htons(serverPort);
     
-    server = new Server(addr);
+    server = new Server(addr, manager);
     server->addObserver(serverReceivedMessage);
     
     return new thread(&Server::receive, server);

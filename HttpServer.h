@@ -37,8 +37,9 @@ private:
     sockaddr_in addr;
     RESTManager manager;
     
-    void connectionHandler(int sockfd, sockaddr_in* clientAddr);
-    std::string createTables() const;
+    void connectionHandler(int sockfd);
+    std::string generateHttpResponse(std::string version = "", bool error = false, std::string message = "") const;
+    std::string generateTables() const;
 };
 
 #endif /* HTTPSERVER_H */

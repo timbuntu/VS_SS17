@@ -10,3 +10,6 @@ dist/
 Makefile
 custom/res/*
 res
+.idea/
+CMakeLists.txt
+cmake-build-debug/
