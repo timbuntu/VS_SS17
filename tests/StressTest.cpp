@@ -29,29 +29,11 @@ using namespace std;
 sockaddr_in addr;
 string lastMessage;
 unsigned int receivedMessageCount = 0;
-Server* server = nullptr;
 
 void serverReceivedMessage(string message) {
     receivedMessageCount++;
     lastMessage = message;
     cout << "Message Received" << endl;
-}
-
-thread* init(string serverIp, unsigned short serverPort) {
-
-    string resources[] = {"Käse", "Bread", "Milk", "Juice", "history"};
-
-    RESTManager manager(resources, 5);
-    manager.initStructure();
-
-    addr.sin_family = AF_INET;
-    addr.sin_addr.s_addr = inet_addr(serverIp.c_str());
-    addr.sin_port = htons(serverPort);
-    
-    server = new Server(addr, manager);
-    server->addObserver(serverReceivedMessage);
-    
-    return new thread(&Server::receive, server);
 }
 
 void loadTest() {
@@ -94,14 +76,32 @@ void lengthTest() {
     cout << "Test successful" << endl;
 }
 
+void httpLengthTest() {
+    
+}
+
 int main(int argc, char** argv) {
     
-    thread* serverThread;
+    string resources[] = {"Käse", "Bread", "Milk", "Juice", "history"};
+
+    RESTManager manager(resources, 5);
+    manager.initStructure();
+
+    addr.sin_family = AF_INET;
     
-    if(argc == 3)
-        serverThread = init(argv[1], stoi(argv[2]));
-    else
-        serverThread = init(DEFAULT_ADDRESS, DEFAULT_PORT);
+    if(argc == 3) {
+        addr.sin_addr.s_addr = inet_addr(argv[1]);
+        addr.sin_port = htons(stoi(argv[2]));
+    }
+    else {
+        addr.sin_addr.s_addr = inet_addr(DEFAULT_ADDRESS);
+        addr.sin_port = htons(DEFAULT_PORT);
+    }
+    
+    Server* server = new Server(addr, manager);
+    server->addObserver(serverReceivedMessage);
+    
+    thread* serverThread = new thread(&Server::receive, server);;
     
     sleep(1);
     

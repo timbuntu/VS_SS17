@@ -77,7 +77,7 @@ void sensorTest(Sensor* sensor) {
 }
 
 void serverTest(Server server) {
-    std::cout << endl << "Testing server for received messages" << std::endl;
+    cout << endl << "Testing server for received messages" << endl;
     if(!messageReceived) {
         cout << "Server did not receive any messages" << endl;
         cout << "Test for server failed" << endl;
@@ -96,23 +96,41 @@ void serverReceivedMessage(string message) {
 }
 
 void httpResponse(sockaddr_in addr) {
-    std::cout << endl << "Checking for HttpServer response" << std::endl;
+    cout << endl << "Checking for HttpServer response" << endl;
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
     connect(sockfd, (sockaddr*)&addr, sizeof(addr));
     
-    char addr_str[INET_ADDRSTRLEN];
-    inet_ntop(AF_INET, &addr.sin_addr, addr_str, INET_ADDRSTRLEN);
-    std::cout << "HttpServer listening on " << addr_str << ":" << std::to_string(ntohs(addr.sin_port)) << std::endl;
-    
-    string request = "GET " + string(addr_str) + " HTTP/1.1";
+    string request = "GET / HTTP/1.1\r\n\r\n";
     char response[4096];
     
-    send(sockfd, request.c_str(), request.length(), NULL);
-    recv(sockfd, response, 4096, NULL);
+    send(sockfd, request.c_str(), request.length(), 0);
+    recv(sockfd, response, 4096, 0);
     if(string(response).find("HTTP/1.1") == string::npos) {
         cout << "Test failed, didn't receive Http response" << endl;
+        close(sockfd);
         exit(EXIT_FAILURE);
     }
+    close(sockfd);
+    cout << "Received response from HttpServer, test successful" << endl;
+}
+
+void httpServerError(sockaddr_in addr) {
+    cout << endl << "Checking HttpServer response in case of invalid URI" << endl;
+    int sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    connect(sockfd, (sockaddr*)&addr, sizeof(addr));
+    
+    string request = "GET /wasd HTTP/1.1\r\n\r\n";
+    char response[4096];
+    
+    send(sockfd, request.c_str(), request.length(), 0);
+    recv(sockfd, response, 4096, 0);
+    if(string(response).find("404 Not Found") == string::npos) {
+        cout << "Test failed, didn't receive error from server" << endl;
+        close(sockfd);
+        exit(EXIT_FAILURE);
+    }
+    close(sockfd);
+    cout << "Received error from HttpServer, test successful" << endl;
 }
 
 int main(int argc, char** argv) {
@@ -180,6 +198,8 @@ int main(int argc, char** argv) {
     integrityTest();
     
     httpResponse(addr);
+    
+    httpServerError(addr);
     
     cout << endl << "All tests were successful" << endl;
     
