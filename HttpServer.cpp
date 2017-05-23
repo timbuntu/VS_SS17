@@ -122,9 +122,18 @@ std::string HttpServer::generateTables() const {
         string name = entry.substr(0, pos);
         string amount = entry.substr(pos+1, entry.length()-pos);
         
+        unsigned long aindex = name.find("ä");
+        unsigned long oindex = name.find("ö");
+        unsigned long uindex = name.find("ü");
+        
+        if (aindex != string::npos)
+                name.replace(aindex, 2, "&auml;");
+        if (oindex != string::npos)
+                name.replace(oindex, 2, "&ouml;");
+        if (uindex != string::npos)
+                name.replace(uindex, 2, "&uuml;");
+        
         table += "<tr><td>" + name + "</td><td>" + amount + "</td></tr>";
-        if (table.find("ä") != string::npos)
-                table.replace(table.find("ä"), 2, "&auml;");
     }
     table += "</table>";
     
