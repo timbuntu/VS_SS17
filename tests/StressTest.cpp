@@ -32,6 +32,8 @@ sockaddr_in addr;
 string lastMessage;
 unsigned int receivedMessageCount = 0;
 
+string generateHttpResponse(RESTManager manager);
+
 void serverReceivedMessage(string message) {
     receivedMessageCount++;
     lastMessage = message;
@@ -53,7 +55,7 @@ void loadTest() {
         delete sensors[i];
     }
     
-    sleep(5);
+    sleep(1);
     
     if(receivedMessageCount < (1000*10)*0,95) {
         cout << "Server overloaded, only " << receivedMessageCount << " of 10000 received, test failed" << endl;
@@ -115,9 +117,54 @@ void httpLengthTest(sockaddr_in addr, RESTManager manager) {
     if(string(response).find("HTTP/1.1 200 OK") == string::npos || (received - sent) >= 2) {
         cout << "Test failed, didn't receive Http response in less than 2 seconds (" << to_string(received-sent) << ")" << endl;
         //exit(EXIT_FAILURE);
+        close(sockfd);
+        return;
     }
     close(sockfd);
     cout << "Received response from HttpServer in less than 2 seconds, test successful" << endl;
+}
+
+void httpLengthIntegrityTest(sockaddr_in addr, RESTManager manager) {
+    cout << endl << "Checking for correct http-response with huge history" << endl;
+    
+    manager.initStructure();
+    manager.put("Käse", "4");
+    manager.put("Bread", "5");
+    manager.put("Milk", "6");
+    manager.put("Juice", "7");
+    
+    string history = "";
+    for(int i = 0; i < 1000000; i++)
+        history += "Käse=" + to_string(i) + "\n";
+    
+    manager.put("history", history);
+    
+    int sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    connect(sockfd, (sockaddr*)&addr, sizeof(addr));
+    
+    string request = "GET / HTTP/1.1\r\n\r\n";
+    string expectedResponse = generateHttpResponse(manager);
+    expectedResponse.shrink_to_fit();
+    string response = "";
+    unsigned long bRead = 0;
+    
+    send(sockfd, request.c_str(), request.length(), 0);
+    do {
+        char segment[4096] = {'\0'};
+        bRead += recv(sockfd, segment, 4096, 0);
+        response += segment;
+    } while(bRead < expectedResponse.length());
+    
+    expectedResponse.shrink_to_fit();
+    if(response != expectedResponse) {
+        cout << "Test failed, didn't receive correct http response " << expectedResponse.compare(response) << endl;
+        cout << response.substr(expectedResponse.length()-6) << endl;
+        //exit(EXIT_FAILURE);
+        close(sockfd);
+        return;
+    }
+    close(sockfd);
+    cout << "Received correct response from HttpServer, test successful" << endl;
 }
 
 int main(int argc, char** argv) {
@@ -153,8 +200,56 @@ int main(int argc, char** argv) {
     loadTest();
     lengthTest();
     httpLengthTest(addrHttp, manager);
+    httpLengthIntegrityTest(addrHttp, manager);
     
     serverThread.detach();
-    httpServerThread.join();
+    httpServerThread.detach();
     return (EXIT_SUCCESS);
+}
+
+string generateTables(RESTManager manager) {
+    string table = "<h3>Aktuell</h3><table><tr><th>Produkt</th><th>Menge</th></tr>";
+    list<string> items = manager.get(INDEX_NAME);
+    items.remove("history");
+    for(string item : items) {
+        if(manager.get(item).size() > 0) {
+            table += "<tr><td>" + item + "</td><td>" + manager.get(item).front() + "</td></tr>";
+             if (table.find("ä") != string::npos)
+                table.replace(table.find("ä"), 2, "&auml;");
+        }
+    }
+    table += "</table>";
+    
+    table += "<h3>History</h3><table><tr><th>Produkt</th><th>Menge</th></tr>";
+    list<string> history = manager.get("history");
+    for(string entry : history) {
+        int pos = entry.find('=');
+        string name = entry.substr(0, pos);
+        string amount = entry.substr(pos+1, entry.length()-pos);
+        
+        unsigned long aindex = name.find("ä");
+        unsigned long oindex = name.find("ö");
+        unsigned long uindex = name.find("ü");
+        
+        if (aindex != string::npos)
+                name.replace(aindex, 2, "&auml;");
+        if (oindex != string::npos)
+                name.replace(oindex, 2, "&ouml;");
+        if (uindex != string::npos)
+                name.replace(uindex, 2, "&uuml;");
+        
+        table += "<tr><td>" + name + "</td><td>" + amount + "</td></tr>";
+    }
+    table += "</table>";
+    
+    return table;
+}
+
+string generateHttpResponse(RESTManager manager) {
+    string html = "<html><header><meta http-equiv=\"refresh\" content=\"1\" /><title>Test</title></header><body>" +
+           generateTables(manager) + "</body></html>";
+    string header = "HTTP/1.1 200 OK\r\nContent-Length: " + to_string(html.length()) + "\r\n" +
+             "Content-Type: text/html\r\nConnection: close\r\n\r\n";
+
+    return header + html;
 }
