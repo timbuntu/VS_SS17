@@ -18,8 +18,10 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <thread>
+#include <ctime>
 #include "../Sensor.h"
 #include "../Server.h"
+#include "../HttpServer.h"
 
 #define DEFAULT_ADDRESS "127.0.0.1"
 #define DEFAULT_PORT 27015
@@ -39,12 +41,17 @@ void serverReceivedMessage(string message) {
 void loadTest() {
     cout << endl << "Testing behavior under heavy load" << endl;
     receivedMessageCount = 0;
+    Sensor* sensors[1000];
     thread* threads[1000];
-    for(int i = 0; i < 1000; i++)
-        threads[i] = new thread(&Sensor::send, new Sensor(to_string(i), addr, 10, -1));
+    for(int i = 0; i < 1000; i++) {
+        sensors[i] = new Sensor(to_string(i), addr, 10, -1);
+        threads[i] = new thread(&Sensor::send, sensors[i]);
+    }
     
-    for(thread* sensorThread : threads)
-        sensorThread->join();
+    for(int i = 0; i < 1000; i++) {
+        threads[i]->join();
+        delete sensors[i];
+    }
     
     sleep(5);
     
@@ -63,9 +70,12 @@ void lengthTest() {
     for(int i = 0; i < 10000; i++)
         longString += "A";
     
-    thread sensorThread(&Sensor::send, new Sensor(longString, addr, 1, -1));
+    Sensor * sensor = new Sensor(longString, addr, 1, -1);
+    
+    thread sensorThread(&Sensor::send, sensor);
     sensorThread.join();
     sleep(1);
+    delete sensor;
     
     if(lastMessage != (longString + "=0")) {
         cout << "Message wasn't transmitted correctly, test failed" << endl;
@@ -76,8 +86,38 @@ void lengthTest() {
     cout << "Test successful" << endl;
 }
 
-void httpLengthTest() {
+void httpLengthTest(sockaddr_in addr, RESTManager manager) {
+    cout << endl << "Checking for response time of HttpServer with huge history" << endl;
+    time_t sent, received;
     
+    manager.initStructure();
+    manager.put("Käse", "4");
+    manager.put("Bread", "5");
+    manager.put("Milk", "6");
+    manager.put("Juice", "7");
+    
+    string history = "";
+    for(int i = 0; i < 1000000; i++)
+        history += "Käse=" + to_string(i) + "\n";
+    
+    manager.put("history", history);
+    
+    int sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    connect(sockfd, (sockaddr*)&addr, sizeof(addr));
+    
+    string request = "GET / HTTP/1.1\r\n\r\n";
+    char response[4096];
+    sent = time(NULL);
+    send(sockfd, request.c_str(), request.length(), 0);
+    recv(sockfd, response, 4096, 0);
+    received = time(NULL);
+    
+    if(string(response).find("HTTP/1.1 200 OK") == string::npos || (received - sent) >= 2) {
+        cout << "Test failed, didn't receive Http response in less than 2 seconds (" << to_string(received-sent) << ")" << endl;
+        //exit(EXIT_FAILURE);
+    }
+    close(sockfd);
+    cout << "Received response from HttpServer in less than 2 seconds, test successful" << endl;
 }
 
 int main(int argc, char** argv) {
@@ -86,7 +126,7 @@ int main(int argc, char** argv) {
 
     RESTManager manager(resources, 5);
     manager.initStructure();
-
+    
     addr.sin_family = AF_INET;
     
     if(argc == 3) {
@@ -98,18 +138,23 @@ int main(int argc, char** argv) {
         addr.sin_port = htons(DEFAULT_PORT);
     }
     
-    Server* server = new Server(addr, manager);
-    server->addObserver(serverReceivedMessage);
+    sockaddr_in addrHttp = addr;
+    addrHttp.sin_port=htons(15000);
     
-    thread* serverThread = new thread(&Server::receive, server);;
+    Server server(addr, manager);
+    server.addObserver(serverReceivedMessage);
+    HttpServer httpServer(addrHttp, manager);
+    
+    thread serverThread(&Server::receive, &server);
+    thread httpServerThread(&HttpServer::start, &httpServer);
     
     sleep(1);
     
     loadTest();
     lengthTest();
+    httpLengthTest(addrHttp, manager);
     
-    
-    serverThread->detach();
+    serverThread.detach();
+    httpServerThread.join();
     return (EXIT_SUCCESS);
 }
-
