@@ -52,6 +52,7 @@ void HttpServer::start() {
 }
 
 void HttpServer::connectionHandler(int sockfd) {
+    //Receive until the end of the http header is reached
     std::string message = "";
     do {
         char segment[4096];
@@ -59,9 +60,11 @@ void HttpServer::connectionHandler(int sockfd) {
         std::cout << "Received message: " << std::endl << segment << std::endl;
         message += segment;
     } while(message.find("\r\n\r\n") == string::npos);
-
+    
+    //Get first line
     std::string request = message.substr(0, message.find("\r\n"));
-
+    
+    //Extract requested method and URI
     unsigned long endMethod, endURI;
     endMethod = request.find_first_of(" ");
     endURI = request.find_last_of(" ");
@@ -69,7 +72,8 @@ void HttpServer::connectionHandler(int sockfd) {
     std::string method = request.substr(0, endMethod);
     std::string uri = request.substr(endMethod+1, endURI-(endMethod+1));
     std::string version = request.substr(endURI+1);
-
+    
+    //Generate http response
     std::string response;
     if(method.compare("GET") != 0)
        response = generateHttpResponse(version, true, "Requested method \"" + method + "\" not implemented");
@@ -77,7 +81,8 @@ void HttpServer::connectionHandler(int sockfd) {
         response = generateHttpResponse(version, true, "Requested URI \"" + uri + "\" not found");
     else
         response = generateHttpResponse(version);
-
+    
+    //Send generated response
     send(sockfd, response.c_str(), response.length(), 0);
     std::cout << "Message sent" << std::endl;
 
@@ -86,12 +91,12 @@ void HttpServer::connectionHandler(int sockfd) {
 
 std::string HttpServer::generateHttpResponse(std::string version, bool error, std::string message) const {
     std::string html, header;
-    if(error) {
+    if(error) {         //Send error message
         html = "<html><header><title>Error</title></header><body><h2>Error 404</h2>" + message + "</body></html>";
         header = version + " 404 Not Found\r\n" +
                  "Content-Length: " + std::to_string(html.length()) + "\r\n" +
                  "Content-Type: text/html\r\nConnection: close\r\n\r\n";
-    } else {
+    } else {            //Send generated tables
         html = "<html><header><meta http-equiv=\"refresh\" content=\"1\" /><title>Test</title></header><body>" +
                generateTables() + "</body></html>";
         header = version + " 200 OK\r\n" +
@@ -103,9 +108,13 @@ std::string HttpServer::generateHttpResponse(std::string version, bool error, st
 }
 
 std::string HttpServer::generateTables() const {
+    //Start of first table
     std::string table = "<h3>Aktuell</h3><table><tr><th>Produkt</th><th>Menge</th></tr>";
+    //Get all items from index of RESTManager
     std::list<string> items = manager.get(INDEX_NAME);
-    items.remove("history");
+    //The history gets its own table later
+    items.remove("history");   
+    //Generate table row for every item
     for(string item : items) {
         if(manager.get(item).size() > 0) {
             table += "<tr><td>" + item + "</td><td>" + manager.get(item).front() + "</td></tr>";
@@ -113,15 +122,21 @@ std::string HttpServer::generateTables() const {
                 table.replace(table.find("ä"), 2, "&auml;");
         }
     }
+    //End of first table
     table += "</table>";
     
+    //Start of second table
     table += "<h3>History</h3><table><tr><th>Produkt</th><th>Menge</th></tr>";
+    //Get all entries of the history from the RESTManager
     std::list<string> history = manager.get("history");
+    //Generate table row for every entry
     for(string entry : history) {
+        //History entries have the form name=amount
         int pos = entry.find('=');
         string name = entry.substr(0, pos);
         string amount = entry.substr(pos+1, entry.length()-pos);
         
+        //Replace some special characters (as example)
         unsigned long aindex = name.find("ä");
         unsigned long oindex = name.find("ö");
         unsigned long uindex = name.find("ü");
@@ -135,6 +150,7 @@ std::string HttpServer::generateTables() const {
         
         table += "<tr><td>" + name + "</td><td>" + amount + "</td></tr>";
     }
+    //End of second table
     table += "</table>";
     
     return table;
