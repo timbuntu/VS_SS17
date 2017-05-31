@@ -25,6 +25,7 @@
 
 #define RES_FOLDER_NAME ((std::string)"res")
 #define INDEX_NAME ((std::string)"index")
+#define CONFIG_NAME "config"
 
 using namespace std;
 
@@ -38,6 +39,7 @@ public:
     void initStructure() const;
     list<string> get(string res) const;
     void put(string res, string value, bool append = false) const;
+    string getConfig(string name) const;
     
 private:
     string* resources;

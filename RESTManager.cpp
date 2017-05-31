@@ -14,6 +14,7 @@
 #include <vector>
 #include <algorithm>
 #include <list>
+#include <unistd.h>
 
 #include "RESTManager.h"
 
@@ -44,10 +45,23 @@ void RESTManager::initStructure() const {
         dir = opendir(RES_FOLDER_NAME.c_str());
     }
     while(dirent* file = readdir(dir)) {
-        if(strcmp(file->d_name, ".") && strcmp(file->d_name, ".."))
+        if(strcmp(file->d_name, ".") && strcmp(file->d_name, "..") && strcmp(file->d_name, "config"))
             remove(((string)(RES_FOLDER_NAME + "/" + string(file->d_name))).c_str());
     }
-    ofstream out(RES_FOLDER_NAME + "/" + INDEX_NAME);
+    
+    ofstream out;
+    if(access((RES_FOLDER_NAME + "/" + CONFIG_NAME).c_str(), F_OK)) {
+        out.open((RES_FOLDER_NAME + "/" + CONFIG_NAME).c_str());
+        out << "ServerIp=127.0.0.1"     << endl;
+        out << "ServerPort=27015"       << endl;
+        out << "HttpServerIp=127.0.0.1" << endl;
+        out << "HttpServerPort=15000"   << endl;
+        out << "Store1Ip=127.0.0.1"     << endl;
+        out << "Store1Port=12000";
+        out.close();
+    }
+    
+    out.open(RES_FOLDER_NAME + "/" + INDEX_NAME);
     for(int i = 0; i < number; i++)
         out << resources[i] << endl;
     out.close();
@@ -79,4 +93,20 @@ void RESTManager::put(string res, string value, bool append) const {
     
     outf << value << endl;
     outf.close();
+}
+
+string RESTManager::getConfig(string name) const {
+    ifstream in(RES_FOLDER_NAME + "/" + CONFIG_NAME);
+    string value = "";
+    while(in.good()) {
+        string line;
+        in >> line;
+        if(line.find(name) != string::npos) {
+            value = line.substr(line.find('=')+1);
+            break;
+        }
+    }
+    
+    in.close();
+    return value;
 }

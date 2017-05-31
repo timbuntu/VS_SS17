@@ -17,6 +17,7 @@
 #include <arpa/inet.h>
 
 #include "Sensor.h"
+#include "RESTManager.h"
 
 #define DEFAULT_ADDRESS "127.0.0.1"
 #define DEFAULT_PORT 27015
@@ -28,21 +29,13 @@ using namespace std;
  */
 int main(int argc, char** argv) {
     
-    string serverIpAddress;
-    unsigned short serverPort;
-    
-    if(argc == 3) {
-        serverIpAddress = argv[1];
-        serverPort = stoi(argv[2]);
-    } else {
-        serverIpAddress = DEFAULT_ADDRESS;
-        serverPort = DEFAULT_PORT;
-    }
+    RESTManager manager(nullptr, 0);
+    manager.initStructure();
     
     sockaddr_in addr;
     addr.sin_family = AF_INET;
-    addr.sin_addr.s_addr = inet_addr(serverIpAddress.c_str());
-    addr.sin_port = htons(serverPort);
+    addr.sin_addr.s_addr = inet_addr(manager.getConfig("ServerIp").c_str());
+    addr.sin_port = htons(stoi(manager.getConfig("ServerPort")));
     
     Sensor* sensors[] = {new Sensor("Käse", addr), new Sensor("Bread", addr), new Sensor("Milk", addr), new Sensor("Juice", addr)};
     thread* sensorThreads[4];

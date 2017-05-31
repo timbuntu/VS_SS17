@@ -32,17 +32,6 @@ using namespace std;
  */
 int main(int argc, char** argv) {
     
-    string serverIpAddress;
-    unsigned short serverPort;
-    
-    if(argc == 3) {
-        serverIpAddress = argv[1];
-        serverPort = stoi(argv[2]);
-    } else {
-        serverIpAddress = DEFAULT_ADDRESS;
-        serverPort = DEFAULT_PORT;
-    }
-    
     string resources[] = {"Käse", "Bread", "Milk", "Juice", "history"};
     
     RESTManager manager(resources, 5);
@@ -50,12 +39,12 @@ int main(int argc, char** argv) {
     
     sockaddr_in addr;
     addr.sin_family = AF_INET;
-    addr.sin_addr.s_addr = inet_addr(serverIpAddress.c_str());
-    addr.sin_port = htons(15000);
+    addr.sin_addr.s_addr = INADDR_ANY;
+    addr.sin_port = htons(stoi(manager.getConfig("HttpServerPort")));
     
     HttpServer* httpServer = new HttpServer(addr, manager);
     
-    addr.sin_port = htons(serverPort);
+    addr.sin_port = htons(stoi(manager.getConfig("ServerPort")));
     
     Server* server = new Server(addr, manager);
     
@@ -63,6 +52,8 @@ int main(int argc, char** argv) {
     thread httpServerThread(&HttpServer::start, httpServer);
     
     sleep(1);
+    
+    addr.sin_addr.s_addr = inet_addr(manager.getConfig("ServerIp").c_str());
     
     Sensor* sensors[] = {new Sensor("Käse", addr), new Sensor("Bread", addr), new Sensor("Milk", addr), new Sensor("Juice", addr)};
     thread* sensorThreads[4];
