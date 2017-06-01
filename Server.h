@@ -22,11 +22,22 @@
 #include <fstream>
 #include <string>
 #include <vector>
+#include <thrift/transport/TSocket.h>
+#include <thrift/transport/TBufferTransports.h>
+#include <thrift/protocol/TBinaryProtocol.h>
+
 #include "RESTManager.h"
+
+#include "gen-cpp/Store.h"
+
+using namespace ::apache::thrift;
+using namespace ::apache::thrift::protocol;
+using namespace ::apache::thrift::transport;
+
 
 class Server {
 public:
-    Server(sockaddr_in addr, RESTManager manager);
+    Server(sockaddr_in addr, RESTManager manager, std::string* storeIps, int* storePorts, unsigned int nStores);
     virtual ~Server();
     
     void receive();
@@ -44,6 +55,9 @@ private:
     RESTManager manager;
     std::vector<std::string> receivedMessages;
     std::vector<void (*)(std::string)> observers;
+    StoreClient** clients;
+    boost::shared_ptr<TTransport>** transport;
+    unsigned int nStores;
     
     void saveReading(std::string message);
 };

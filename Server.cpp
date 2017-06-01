@@ -13,10 +13,11 @@
 
 #include "Server.h"
 
-Server::Server(sockaddr_in addr, RESTManager manager) {
+Server::Server(sockaddr_in addr, RESTManager manager, std::string* storeIps, int* storePorts, unsigned int nStores) {
     
     this->addr = addr;
     this->manager = manager;
+    this->nStores = nStores;
     sockfd = socket(AF_INET, SOCK_DGRAM, 0);
     int optionValue = 1;
     setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &optionValue, sizeof(int));
@@ -24,11 +25,28 @@ Server::Server(sockaddr_in addr, RESTManager manager) {
         int optionValue = 1;
         setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &optionValue, sizeof(int));
         bound = (bind(sockfd, (sockaddr*)&addr, sizeof(sockaddr_in)) == 0);
+        
+        transport = new boost::shared_ptr<TTransport>*[nStores];
+        clients = new StoreClient*[nStores];
+        
+        for(int i = 0; i < nStores; i++) {
+            boost::shared_ptr<TSocket> socket(new TSocket(storeIps[i], storePorts[i]));
+            transport[i] = new boost::shared_ptr<TTransport> (new TBufferedTransport(socket));
+            boost::shared_ptr<TProtocol> protocol(new TBinaryProtocol(*transport[i]));
+            clients[i] = new StoreClient(protocol);
+        }
     }
+    
 }
 
 Server::~Server() {
     close(sockfd);
+    for(int i = 0; i < nStores; i++) {
+        delete transport[i];
+        delete clients[i];
+    }
+    delete[] transport;
+    delete[] clients;
 }
 
 void Server::receive() {
@@ -47,6 +65,9 @@ void Server::receive() {
         std::cout << "Received: " << message << std::endl;
         saveReading(message);
         notifyObservers(message);
+        transport[0]->get()->open();
+        std::cout << "Price Milk:" << clients[0]->getPrice("Milk") << std::endl;
+        transport[0]->get()->close();
     }
 }
 

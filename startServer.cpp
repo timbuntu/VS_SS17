@@ -24,6 +24,7 @@
 
 #define DEFAULT_ADDRESS "127.0.0.1"
 #define DEFAULT_PORT 27015
+#define STORE_COUNT 2
 #define STORE_ITEMS "Käse", "Bread", "Milk", "Juice"
 
 using namespace std;
@@ -37,12 +38,20 @@ int main(int argc, char** argv) {
     RESTManager manager(resources, 5);
     manager.initStructure();
     
+    string storeIps[STORE_COUNT];
+    int storePorts[STORE_COUNT];
+    int port = stoi(manager.getConfig("Store1Port"));
+    for(int i = 0; i < STORE_COUNT; i++) {
+        storeIps[i] = manager.getConfig("Store1Ip");
+        storePorts[i] = port++;
+    }
+    
     sockaddr_in addr;
     addr.sin_family = AF_INET;
     addr.sin_addr.s_addr = INADDR_ANY;
     addr.sin_port = htons(stoi(manager.getConfig("ServerPort")));
     
-    Server* server = new Server(addr, manager);
+    Server* server = new Server(addr, manager, storeIps, storePorts, STORE_COUNT);
     
     addr.sin_port = htons(stoi(manager.getConfig("HttpServerPort")));
     
@@ -51,11 +60,19 @@ int main(int argc, char** argv) {
     sleep(1);
     thread serverThread(&Server::receive, server);
     thread httpServerThread(&HttpServer::start, httpServer);
+    thread* storeServerThreads[STORE_COUNT];
     
-    StoreHandler::startStoreServer(stoi(manager.getConfig("Store1Port")), items, prices, sizeof(prices) / sizeof(int));
+    for(int i = 0; i < STORE_COUNT; i++) {
+        storeServerThreads[i] = new thread(StoreHandler::startStoreServer, storePorts[i], items, prices, sizeof(prices) / sizeof(int));
+    }
+    
     
     serverThread.join();
     httpServerThread.join();
+    
+    for(thread* thread : storeServerThreads) {
+        thread->join();
+    }
     
     return 0;
 }
