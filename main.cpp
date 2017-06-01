@@ -18,12 +18,14 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+
+#include "gen-cpp/Store_server.skeleton.cpp"
 #include "Server.h"
 #include "Sensor.h"
 #include "HttpServer.h"
 
-#define DEFAULT_ADDRESS "127.0.0.1"
 #define DEFAULT_PORT 27015
+#define STORE_ITEMS "Käse", "Bread", "Milk", "Juice"
 
 using namespace std;
 
@@ -32,7 +34,9 @@ using namespace std;
  */
 int main(int argc, char** argv) {
     
-    string resources[] = {"Käse", "Bread", "Milk", "Juice", "history"};
+    string items[] = {STORE_ITEMS};
+    unsigned int prices[] = { 220, 150, 130, 180};
+    string resources[] = {STORE_ITEMS, "history"};
     
     RESTManager manager(resources, 5);
     manager.initStructure();
@@ -60,6 +64,8 @@ int main(int argc, char** argv) {
     
     for(int i = 0; i < 4; i++)
         sensorThreads[i] = new thread(&Sensor::send, sensors[i]);
+    
+    StoreHandler::startStoreServer(stoi(manager.getConfig("Store1Port")), items, prices, sizeof(prices) / sizeof(int));
     
     for(int i = 0; i < 4; i++)
         sensorThreads[i]->join();

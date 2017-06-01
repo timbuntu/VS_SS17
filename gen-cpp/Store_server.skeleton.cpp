@@ -3,9 +3,10 @@
 
 #include "Store.h"
 #include <thrift/protocol/TBinaryProtocol.h>
-#include <thrift/server/TSimpleServer.h>
+#include <thrift/server/TThreadedServer.h>
 #include <thrift/transport/TServerSocket.h>
 #include <thrift/transport/TBufferTransports.h>
+#include <map>
 
 using namespace ::apache::thrift;
 using namespace ::apache::thrift::protocol;
@@ -15,38 +16,67 @@ using namespace ::apache::thrift::server;
 using boost::shared_ptr;
 
 class StoreHandler : virtual public StoreIf {
- public:
-  StoreHandler() {
-    // Your initialization goes here
-  }
+public:
 
-  int32_t getPrice(const std::string& item) {
-    // Your implementation goes here
-    printf("getPrice\n");
-  }
+    StoreHandler() {
+    }
 
-  bool order(const std::string& item, const int16_t amount) {
-    // Your implementation goes here
-    printf("order\n");
-  }
+    StoreHandler(std::string* products, unsigned int* prices, unsigned long n) {
+        
+        for (int i = 0; i < n; i++) {
+            itemPrices.insert(std::make_pair(products[i], prices[i]));
+        }
+    }
 
-  void getReceipt(std::vector<Order> & _return) {
-    // Your implementation goes here
-    printf("getReceipt\n");
-  }
+    int32_t getPrice(const std::string& item) {
+        auto it = itemPrices.find(item);
+        if(it != itemPrices.end()) {
+            return it->second;
+        } else {
+            return INT_MAX;
+        }
+        printf("getPrice\n");
+    }
+
+    bool order(const std::string& item, const int16_t amount) {
+        
+        bool success = false;
+        auto it = itemPrices.find(item);
+        
+        if(it != itemPrices.end()) {
+            Order order;
+            order.item = it->first;
+            order.price = it->second;
+            order.amount = amount;
+            order.total = order.price * order.amount;
+            orders.push_back(order);
+            success = true;
+        }
+        
+        printf("order\n");
+        return success;
+    }
+
+    void getReceipt(std::vector<Order> & _return) {
+        
+        _return = orders;
+        printf("getReceipt\n");
+    }
+
+    static TServer& startStoreServer(int port, std::string* products, unsigned int* prices, unsigned long n) {
+        shared_ptr<StoreHandler> handler(new StoreHandler());
+        shared_ptr<TProcessor> processor(new StoreProcessor(handler));
+        shared_ptr<TServerTransport> serverTransport(new TServerSocket(port));
+        shared_ptr<TTransportFactory> transportFactory(new TBufferedTransportFactory());
+        shared_ptr<TProtocolFactory> protocolFactory(new TBinaryProtocolFactory());
+
+        TThreadedServer* server = new TThreadedServer(processor, serverTransport, transportFactory, protocolFactory);
+        server->serve();
+        return *server;
+    }
+
+private:
+    std::map<std::string, unsigned int> itemPrices;
+    std::vector<Order> orders;
 
 };
-
-int main(int argc, char **argv) {
-  int port = 9090;
-  shared_ptr<StoreHandler> handler(new StoreHandler());
-  shared_ptr<TProcessor> processor(new StoreProcessor(handler));
-  shared_ptr<TServerTransport> serverTransport(new TServerSocket(port));
-  shared_ptr<TTransportFactory> transportFactory(new TBufferedTransportFactory());
-  shared_ptr<TProtocolFactory> protocolFactory(new TBinaryProtocolFactory());
-
-  TSimpleServer server(processor, serverTransport, transportFactory, protocolFactory);
-  server.serve();
-  return 0;
-}
-

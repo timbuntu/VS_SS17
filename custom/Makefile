@@ -1,9 +1,11 @@
-classes=../Sensor.cpp ../Server.cpp ../HttpServer.cpp ../RESTManager.cpp
+classes=../Sensor.cpp ../Server.cpp ../HttpServer.cpp ../RESTManager.cpp ../gen-cpp/*
 src=../main.cpp $(classes)
 srcServer=../startServer.cpp $(classes)
 srcClient=../startSensors.cpp $(classes)
 srcTest=../tests/Test.cpp $(classes)
 srcStressTest=../tests/StressTest.cpp $(classes)
+
+compileCommand=g++ -std=c++11 -pthread -lthrift
 
 all:runTest server client serverClient
 
@@ -25,19 +27,19 @@ runStressTest:stressTest
 	./stressTest $(IP) $(PORT)
 
 test:$(srcTest)
-	g++ -std=c++11 -pthread $(srcTest) -o test
+	$(compileCommand) $(srcTest) -o test
 
 stressTest:$(srcStressTest)
-	g++ -std=c++11 -pthread $(srcStressTest) -o stressTest
+	$(compileCommand) $(srcStressTest) -o stressTest
 
 server:$(srcServer)
-	g++ -std=c++11 -pthread $(srcServer) -o server
+	$(compileCommand) $(srcServer) -o server
 
 client:$(srcClient)
-	g++ -std=c++11 -pthread $(srcClient) -o client
+	$(compileCommand) $(srcClient) -o client
 
 serverClient:$(src)
-	g++ -std=c++11 -pthread $(src) -o serverClient
+	$(compileCommand) $(src) -o serverClient
 
 clean:
 	rm -f server client serverClient test stressTest res/*

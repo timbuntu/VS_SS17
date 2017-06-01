@@ -17,18 +17,22 @@
 #include <thread>
 #include <string.h>
 
+#include "gen-cpp/Store_server.skeleton.cpp"
 #include "RESTManager.h"
 #include "Server.h"
 #include "HttpServer.h"
 
 #define DEFAULT_ADDRESS "127.0.0.1"
 #define DEFAULT_PORT 27015
+#define STORE_ITEMS "Käse", "Bread", "Milk", "Juice"
 
 using namespace std;
 
 int main(int argc, char** argv) {
     
-    string resources[] = {"Käse", "Bread", "Milk", "Juice", "history"};
+    string items[] = {STORE_ITEMS};
+    unsigned int prices[] = { 220, 150, 130, 180};
+    string resources[] = {STORE_ITEMS, "history"};
     
     RESTManager manager(resources, 5);
     manager.initStructure();
@@ -48,6 +52,7 @@ int main(int argc, char** argv) {
     thread serverThread(&Server::receive, server);
     thread httpServerThread(&HttpServer::start, httpServer);
     
+    StoreHandler::startStoreServer(stoi(manager.getConfig("Store1Port")), items, prices, sizeof(prices) / sizeof(int));
     
     serverThread.join();
     httpServerThread.join();

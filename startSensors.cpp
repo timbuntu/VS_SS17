@@ -30,7 +30,7 @@ using namespace std;
 int main(int argc, char** argv) {
     
     RESTManager manager(nullptr, 0);
-    manager.initStructure();
+    //manager.initStructure();
     
     sockaddr_in addr;
     addr.sin_family = AF_INET;
