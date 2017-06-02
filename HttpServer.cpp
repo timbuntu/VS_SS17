@@ -55,7 +55,7 @@ void HttpServer::connectionHandler(int sockfd) {
     //Receive until the end of the http header is reached
     std::string message = "";
     do {
-        char segment[4096];
+        char segment[4096] = {'\0'};
         recv(sockfd, &segment, 4096, 0);
         std::cout << "Received message: " << std::endl << segment << std::endl;
         message += segment;
@@ -75,7 +75,11 @@ void HttpServer::connectionHandler(int sockfd) {
     
     //Generate http response
     std::string response;
-    if(method.compare("GET") != 0)
+    if(method.compare("POST") == 0) {
+        notifyObservers(message.substr(message.find_last_of('=')+1));
+        response = generateHttpResponse(version, false, "303 See Other\r\nLocation: /");
+    }
+    else if(method.compare("GET") != 0)
        response = generateHttpResponse(version, true, "Requested method \"" + method + "\" not implemented");
     else if(uri.compare("/") != 0)
         response = generateHttpResponse(version, true, "Requested URI \"" + uri + "\" not found");
@@ -96,10 +100,15 @@ std::string HttpServer::generateHttpResponse(std::string version, bool error, st
         header = version + " 404 Not Found\r\n" +
                  "Content-Length: " + std::to_string(html.length()) + "\r\n" +
                  "Content-Type: text/html\r\nConnection: close\r\n\r\n";
-    } else {            //Send generated tables
-        html = "<html><header><meta http-equiv=\"refresh\" content=\"1\" /><title>Test</title></header><body>" +
+    } else if(message.compare("") == 0) {            //Send generated tables
+        html = "<html><header><meta http-equiv=\"refresh\" content=\"2\" /><title>Test</title></header><body>" +
                generateTables() + "</body></html>";
         header = version + " 200 OK\r\n" +
+                 "Content-Length: " + std::to_string(html.length()) + "\r\n" +
+                 "Content-Type: text/html\r\nConnection: close\r\n\r\n";
+    } else {
+        html = "";
+        header = version + " " + message + "\r\n" +
                  "Content-Length: " + std::to_string(html.length()) + "\r\n" +
                  "Content-Type: text/html\r\nConnection: close\r\n\r\n";
     }
@@ -117,7 +126,9 @@ std::string HttpServer::generateTables() const {
     //Generate table row for every item
     for(string item : items) {
         if(manager.get(item).size() > 0) {
-            table += "<tr><td>" + item + "</td><td>" + manager.get(item).front() + "</td></tr>";
+            table += "<tr><td>" + item + "</td><td>" + manager.get(item).front() +
+                     "</td><td><form action=\"/\" method=\"post\"><button name=\"" +
+                     item + "\" value=\"" + item + "\" type=\"submit\">Restock</button></form></td></tr>";
              if (table.find("ä") != string::npos)
                 table.replace(table.find("ä"), 2, "&auml;");
         }
@@ -154,4 +165,13 @@ std::string HttpServer::generateTables() const {
     table += "</table>";
     
     return table;
+}
+
+void HttpServer::addObserver(void (*observer)(std::string)) {
+    observers.push_back(observer);
+}
+
+void HttpServer::notifyObservers(std::string info) const {
+    for(void (*observer)(std::string) : observers)
+        observer(info);
 }

@@ -13,6 +13,9 @@
 
 #include "Server.h"
 
+RESTManager Server::manager;
+std::map<std::string, int> Server::offsets;
+
 Server::Server(sockaddr_in addr, RESTManager manager, std::string* storeIps, int* storePorts, unsigned int nStores) {
     
     this->addr = addr;
@@ -62,12 +65,32 @@ void Server::receive() {
         char* buffer = new char[4096];
         int n = recv(sockfd, buffer, 4096, 0);
         std::string message(buffer, n);
-        std::cout << "Received: " << message << std::endl;
+        //std::cout << "Received: " << message << std::endl;
         saveReading(message);
         notifyObservers(message);
-        transport[0]->get()->open();
-        std::cout << "Price Milk:" << clients[0]->getPrice("Milk") << std::endl;
-        transport[0]->get()->close();
+        
+        unsigned int pos = message.find('=');
+        std::string item = message.substr(0, pos);
+        int amount = (std::stoi(message.substr(pos+1))+offsets.at(item)) % 101;
+        if(amount < 20) {
+            int prices[nStores];
+            int cheapest = 0;
+            for(int i = 0; i < nStores; i++) {
+                transport[i]->get()->open();
+                prices[i] = clients[i]->getPrice(item);
+                transport[i]->get()->close();
+                //std::cout << item << " at Store" << i << ": " << prices[i] << " cents" << std::endl;
+                if(prices[i] < prices[cheapest])
+                    cheapest = i;
+            }
+            transport[cheapest]->get()->open();
+            bool success = clients[cheapest]->order(item, 100-amount);
+            transport[cheapest]->get()->close();
+            if(success) {
+                restock(item);
+                std::cout << "Bought " << 100-amount << " units " << item << " for " << prices[cheapest] << " cents at Store " << cheapest << std::endl;
+            }
+        }
     }
 }
 
@@ -83,7 +106,25 @@ void Server::notifyObservers(std::string info) const {
 void Server::saveReading(std::string message) {
     receivedMessages.push_back(message);
     int pos = message.find('=');
+    std::string item = message.substr(0, pos);
     
-    manager.put("history", message, true);
-    manager.put(message.substr(0, pos), message.substr(pos+1, message.length()-pos));
+    if(offsets.find(item) == offsets.end())
+        offsets.insert(std::pair<std::string, int>(item, 0));
+    
+    int value = (stoi(message.substr(pos+1, message.length()-pos))+offsets.at(item)) % 101;
+    
+    manager.put("history", item + "=" + to_string(value), true);
+    manager.put(item, to_string(value));
+}
+
+void Server::restock(std::string item) {
+    std::cout << "Trying to restock " << item << std::endl;
+    
+    if(offsets.find(item) != offsets.end()) {
+        int offset = offsets.at(item);
+        offsets.erase(item);
+        offsets.insert(std::pair<std::string, int>(item, 100-(stoi(manager.get(item).front())-offset)%101));
+        manager.put("history", item + "=" + to_string(100), true);
+        manager.put(item, to_string(100));
+    }
 }

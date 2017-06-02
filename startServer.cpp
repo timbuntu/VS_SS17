@@ -25,14 +25,15 @@
 #define DEFAULT_ADDRESS "127.0.0.1"
 #define DEFAULT_PORT 27015
 #define STORE_COUNT 2
-#define STORE_ITEMS "Käse", "Bread", "Milk", "Juice"
+#define STORE_ITEMS "Cheese", "Bread", "Milk", "Juice"
 
 using namespace std;
 
 int main(int argc, char** argv) {
     
     string items[] = {STORE_ITEMS};
-    unsigned int prices[] = { 220, 150, 130, 180};
+    int prices[STORE_COUNT][4] = {{ 220, 150, 130, 180},
+                                  { 200, 155, 120, 200}};
     string resources[] = {STORE_ITEMS, "history"};
     
     RESTManager manager(resources, 5);
@@ -57,14 +58,15 @@ int main(int argc, char** argv) {
     
     HttpServer* httpServer = new HttpServer(addr, manager);
     
-    sleep(1);
-    thread serverThread(&Server::receive, server);
-    thread httpServerThread(&HttpServer::start, httpServer);
     thread* storeServerThreads[STORE_COUNT];
     
     for(int i = 0; i < STORE_COUNT; i++) {
-        storeServerThreads[i] = new thread(StoreHandler::startStoreServer, storePorts[i], items, prices, sizeof(prices) / sizeof(int));
+        storeServerThreads[i] = new thread(StoreHandler::startStoreServer, storePorts[i], items, prices[i], sizeof(prices[i]) / sizeof(int));
     }
+    
+    sleep(1);
+    thread serverThread(&Server::receive, server);
+    thread httpServerThread(&HttpServer::start, httpServer);
     
     
     serverThread.join();

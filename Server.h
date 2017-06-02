@@ -22,6 +22,7 @@
 #include <fstream>
 #include <string>
 #include <vector>
+#include <map>
 #include <thrift/transport/TSocket.h>
 #include <thrift/transport/TBufferTransports.h>
 #include <thrift/protocol/TBinaryProtocol.h>
@@ -43,6 +44,7 @@ public:
     void receive();
     std::vector<std::string> getReceivedMessages() const { return receivedMessages; }
     bool hasReceivedMessages() const { return !receivedMessages.empty(); }
+    static void restock(std::string item);
     
     void addObserver(void (*observer)(std::string));
     void notifyObservers(std::string info) const;
@@ -52,9 +54,10 @@ private:
     int sockfd;
     bool bound;
     sockaddr_in addr;
-    RESTManager manager;
+    static RESTManager manager;
     std::vector<std::string> receivedMessages;
     std::vector<void (*)(std::string)> observers;
+    static std::map<std::string, int> offsets;
     StoreClient** clients;
     boost::shared_ptr<TTransport>** transport;
     unsigned int nStores;

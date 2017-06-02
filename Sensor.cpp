@@ -51,8 +51,8 @@ void Sensor::send() {
         std::cout << "Sensor sending to " << addr_str << ":" << std::to_string(ntohs(serverAddr.sin_port)) << std::endl;
         while(!manual || reading > 0) {
             
-            if(reading == 0)
-                reading = rand() % 100;
+            if(reading < 20)
+                reading = 100;
             else if(reading >= -steps)
                 reading += steps;
             else

@@ -31,11 +31,16 @@ public:
     virtual ~HttpServer();
     
     void start();
+    
+    void addObserver(void (*observer)(std::string));
+    void notifyObservers(std::string info) const;
+    
 private:
     int sockfd;
     bool bound;
     sockaddr_in addr;
     RESTManager manager;
+    std::list<void (*)(std::string)> observers;
     
     void connectionHandler(int sockfd);
     std::string generateHttpResponse(std::string version = "", bool error = false, std::string message = "") const;

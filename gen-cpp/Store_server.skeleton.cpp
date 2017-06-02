@@ -21,10 +21,10 @@ public:
     StoreHandler() {
     }
 
-    StoreHandler(std::string* products, unsigned int* prices, unsigned long n) {
+    StoreHandler(std::string* items, int* prices, unsigned long n) {
         
         for (int i = 0; i < n; i++) {
-            itemPrices.insert(std::make_pair(products[i], prices[i]));
+            itemPrices.insert(std::pair<std::string, int>(items[i], prices[i]));
         }
     }
 
@@ -63,8 +63,8 @@ public:
         printf("getReceipt\n");
     }
 
-    static TServer& startStoreServer(int port, std::string* products, unsigned int* prices, unsigned long n) {
-        shared_ptr<StoreHandler> handler(new StoreHandler());
+    static TServer& startStoreServer(int port, std::string* items, int* prices, unsigned long n) {
+        shared_ptr<StoreHandler> handler(new StoreHandler(items, prices, n));
         shared_ptr<TProcessor> processor(new StoreProcessor(handler));
         shared_ptr<TServerTransport> serverTransport(new TServerSocket(port));
         shared_ptr<TTransportFactory> transportFactory(new TBufferedTransportFactory());
