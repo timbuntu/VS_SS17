@@ -19,11 +19,14 @@
 #include <arpa/inet.h>
 #include <thread>
 #include <ctime>
+#include "../gen-cpp/Store_server.skeleton.cpp"
 #include "../Sensor.h"
 #include "../Server.h"
 #include "../HttpServer.h"
 
 #define DEFAULT_ADDRESS "127.0.0.1"
+#define STORE_COUNT 2
+#define STORE_ITEMS "Cheese", "Bread", "Milk", "Juice"
 #define DEFAULT_PORT 27015
 
 using namespace std;
@@ -169,31 +172,42 @@ void httpLengthIntegrityTest(sockaddr_in addr, RESTManager manager) {
 
 int main(int argc, char** argv) {
     
-    string resources[] = {"Käse", "Bread", "Milk", "Juice", "history"};
-
+    
+    string items[] = {STORE_ITEMS};
+    int prices[STORE_COUNT][4] = {{ 220, 150, 130, 180},
+                                  { 200, 155, 120, 200}};
+    string resources[] = {STORE_ITEMS, "history"};
+    
     RESTManager manager(resources, 5);
     manager.initStructure();
     
-    addr.sin_family = AF_INET;
+    string storeIps[STORE_COUNT];
+    int storePorts[STORE_COUNT];
+    int port = stoi(manager.getConfig("Store1Port"));
+    for(int i = 0; i < STORE_COUNT; i++) {
+        storeIps[i] = manager.getConfig("Store1Ip");
+        storePorts[i] = port++;
+    }
     
-    if(argc == 3) {
-        addr.sin_addr.s_addr = inet_addr(argv[1]);
-        addr.sin_port = htons(stoi(argv[2]));
-    }
-    else {
-        addr.sin_addr.s_addr = inet_addr(DEFAULT_ADDRESS);
-        addr.sin_port = htons(DEFAULT_PORT);
-    }
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = inet_addr(manager.getConfig("ServerIp").c_str());
+    addr.sin_port = htons(stoi(manager.getConfig("ServerPort")));
     
     sockaddr_in addrHttp = addr;
-    addrHttp.sin_port=htons(15000);
+    addrHttp.sin_port=htons(stoi(manager.getConfig("HttpServerPort")));
+    addrHttp.sin_addr.s_addr = inet_addr(manager.getConfig("HttpServerIp").c_str());
     
-    Server server(addr, manager);
+    Server server(addr, manager, storeIps, storePorts, STORE_COUNT);
     server.addObserver(serverReceivedMessage);
     HttpServer httpServer(addrHttp, manager);
     
     thread serverThread(&Server::receive, &server);
     thread httpServerThread(&HttpServer::start, &httpServer);
+    thread* storeServerThreads[STORE_COUNT];
+    
+    for(int i = 0; i < STORE_COUNT; i++) {
+        storeServerThreads[i] = new thread(StoreHandler::startStoreServer, storePorts[i], items, prices[i], sizeof(prices[i]) / sizeof(int));
+    }
     
     sleep(1);
     
@@ -204,6 +218,11 @@ int main(int argc, char** argv) {
     
     serverThread.detach();
     httpServerThread.detach();
+    
+    for(thread* thread : storeServerThreads) {
+        thread->detach();
+    }
+    
     return (EXIT_SUCCESS);
 }
 

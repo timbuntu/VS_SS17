@@ -35,7 +35,7 @@ public:
         } else {
             return INT_MAX;
         }
-        printf("getPrice\n");
+        //printf("getPrice\n");
     }
 
     bool order(const std::string& item, const int16_t amount) {
@@ -53,14 +53,14 @@ public:
             success = true;
         }
         
-        printf("order\n");
+        //printf("order\n");
         return success;
     }
 
     void getReceipt(std::vector<Order> & _return) {
         
         _return = orders;
-        printf("getReceipt\n");
+        //printf("getReceipt\n");
     }
 
     static TServer& startStoreServer(int port, std::string* items, int* prices, unsigned long n) {

@@ -57,7 +57,7 @@ void HttpServer::connectionHandler(int sockfd) {
     do {
         char segment[4096] = {'\0'};
         recv(sockfd, &segment, 4096, 0);
-        std::cout << "Received message: " << std::endl << segment << std::endl;
+        //std::cout << "Received message: " << std::endl << segment << std::endl;
         message += segment;
     } while(message.find("\r\n\r\n") == string::npos);
     
@@ -88,7 +88,7 @@ void HttpServer::connectionHandler(int sockfd) {
     
     //Send generated response
     send(sockfd, response.c_str(), response.length(), 0);
-    std::cout << "Message sent" << std::endl;
+    //std::cout << "Message sent" << std::endl;
 
     close(sockfd);
 }

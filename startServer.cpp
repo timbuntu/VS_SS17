@@ -57,6 +57,7 @@ int main(int argc, char** argv) {
     addr.sin_port = htons(stoi(manager.getConfig("HttpServerPort")));
     
     HttpServer* httpServer = new HttpServer(addr, manager);
+    httpServer->addObserver(&Server::restock);
     
     thread* storeServerThreads[STORE_COUNT];
     

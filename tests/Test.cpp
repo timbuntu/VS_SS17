@@ -20,12 +20,15 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+#include "../gen-cpp/Store_server.skeleton.cpp"
 #include "../Server.h"
 #include "../Sensor.h"
 #include "../RESTManager.h"
 #include "../HttpServer.h"
 
 #define DEFAULT_ADDRESS "127.0.0.1"
+#define STORE_COUNT 2
+#define STORE_ITEMS "Cheese", "Bread", "Milk", "Juice"
 #define DEFAULT_PORT 27015
 
 using namespace std;
@@ -138,33 +141,42 @@ int main(int argc, char** argv) {
     string serverIpAddress;
     unsigned short serverPort;
     
-    if(argc == 3) {
-        serverIpAddress = argv[1];
-        serverPort = stoi(argv[2]);
-    } else {
-        serverIpAddress = DEFAULT_ADDRESS;
-        serverPort = DEFAULT_PORT;
-    }
-    
-    string resources[] = {"Käse", "Bread", "Milk", "Juice", "history"};
+    string items[] = {STORE_ITEMS};
+    int prices[STORE_COUNT][4] = {{ 220, 150, 130, 180},
+                                  { 200, 155, 120, 200}};
+    string resources[] = {STORE_ITEMS, "history"};
     
     RESTManager manager(resources, 5);
     manager.initStructure();
     
+    string storeIps[STORE_COUNT];
+    int storePorts[STORE_COUNT];
+    int port = stoi(manager.getConfig("Store1Port"));
+    for(int i = 0; i < STORE_COUNT; i++) {
+        storeIps[i] = manager.getConfig("Store1Ip");
+        storePorts[i] = port++;
+    }
+    
     sockaddr_in addr;
     addr.sin_family = AF_INET;
-    addr.sin_addr.s_addr = inet_addr(serverIpAddress.c_str());
-    addr.sin_port = htons(serverPort);
+    addr.sin_addr.s_addr = inet_addr(manager.getConfig("ServerIp").c_str());
+    addr.sin_port = htons(stoi(manager.getConfig("ServerPort")));
     
     sockaddr_in addrHttpServer = addr;
-    addrHttpServer.sin_port = htons(serverPort);
+    addrHttpServer.sin_port= htons(stoi(manager.getConfig("HttpServerPort")));
+    addrHttpServer.sin_addr.s_addr = inet_addr(manager.getConfig("HttpServerIp").c_str());
     
-    Server server(addr, manager);
+    Server server(addr, manager, storeIps, storePorts, STORE_COUNT);
     server.addObserver(serverReceivedMessage);
     HttpServer httpServer(addrHttpServer, manager);
     
     thread serverThread(&Server::receive, &server);
     thread httpServerThread(&HttpServer::start, &httpServer);
+    thread* storeServerThreads[STORE_COUNT];
+    
+    for(int i = 0; i < STORE_COUNT; i++) {
+        storeServerThreads[i] = new thread(StoreHandler::startStoreServer, storePorts[i], items, prices[i], sizeof(prices[i]) / sizeof(int));
+    }
     
     sleep(1);
     
@@ -205,6 +217,11 @@ int main(int argc, char** argv) {
     
     serverThread.detach();
     httpServerThread.detach();
+    
+    for(thread* thread : storeServerThreads) {
+        thread->detach();
+    }
+    
     return (EXIT_SUCCESS);
 }
 

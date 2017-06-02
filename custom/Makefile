@@ -2,6 +2,7 @@ classes=../Sensor.cpp ../Server.cpp ../HttpServer.cpp ../RESTManager.cpp ../gen-
 src=../main.cpp $(classes)
 srcServer=../startServer.cpp $(classes)
 srcClient=../startSensors.cpp $(classes)
+srcStore=../startStore.cpp $(classes)
 srcTest=../tests/Test.cpp $(classes)
 srcStressTest=../tests/StressTest.cpp $(classes)
 
@@ -19,6 +20,9 @@ runServer:server
 
 runClient:client
 	./client $(IP) $(PORT)
+
+runStore:store
+	./store
 
 runTest:test
 	./test $(IP) $(PORT)
@@ -38,8 +42,11 @@ server:$(srcServer)
 client:$(srcClient)
 	$(compileCommand) $(srcClient) -o client
 
+store:$(srcStore)
+	$(compileCommand) $(srcStore) -o store
+
 serverClient:$(src)
 	$(compileCommand) $(src) -o serverClient
 
 clean:
-	rm -f server client serverClient test stressTest res/*
+	rm -f server client store serverClient test stressTest res/*

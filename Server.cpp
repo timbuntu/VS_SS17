@@ -118,7 +118,7 @@ void Server::saveReading(std::string message) {
 }
 
 void Server::restock(std::string item) {
-    std::cout << "Trying to restock " << item << std::endl;
+    //std::cout << "Trying to restock " << item << std::endl;
     
     if(offsets.find(item) != offsets.end()) {
         int offset = offsets.at(item);
