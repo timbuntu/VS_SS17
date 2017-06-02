@@ -43,12 +43,28 @@ int main(int argc, char** argv) {
     RESTManager manager(resources, 5);
     manager.initStructure();
     
-    string storeIps[STORE_COUNT];
-    int storePorts[STORE_COUNT];
+    int externalStoreN = stoi(manager.getConfig("ExternalStoreN"));
+    
+    string storeIps[STORE_COUNT+externalStoreN];
+    int storePorts[STORE_COUNT+externalStoreN];
+    
+    //Local stores
     int port = stoi(manager.getConfig("Store1Port"));
     for(int i = 0; i < STORE_COUNT; i++) {
         storeIps[i] = manager.getConfig("Store1Ip");
         storePorts[i] = port++;
+    }
+    
+    //Exernal stores
+    string externalStores = manager.getConfig("ExternalStores");
+    for(int i = STORE_COUNT; i < STORE_COUNT+externalStoreN; i++) {
+        unsigned int pos = externalStores.find(',');
+        string store = externalStores.substr(0, pos);
+        unsigned int portDelim = store.find(':');
+        
+        storeIps[i] = store.substr(0, portDelim);
+        storePorts[i] = stoi(store.substr(portDelim+1, store.find(',')-(portDelim+1)));
+        externalStores.erase(0, pos+1);
     }
     
     sockaddr_in addr;
@@ -60,7 +76,7 @@ int main(int argc, char** argv) {
     
     addr.sin_port = htons(stoi(manager.getConfig("ServerPort")));
     
-    Server* server = new Server(addr, manager, storeIps, storePorts, STORE_COUNT);
+    Server* server = new Server(addr, manager, storeIps, storePorts, STORE_COUNT+externalStoreN);
     httpServer->addObserver(&Server::restock);
     thread* storeServerThreads[STORE_COUNT];
     

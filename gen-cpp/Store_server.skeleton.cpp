@@ -71,6 +71,8 @@ public:
         shared_ptr<TProtocolFactory> protocolFactory(new TBinaryProtocolFactory());
 
         TThreadedServer* server = new TThreadedServer(processor, serverTransport, transportFactory, protocolFactory);
+        
+        std::cout << "StoreServer configured to listen on port " << port << std::endl;
         server->serve();
         return *server;
     }

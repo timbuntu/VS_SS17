@@ -24,8 +24,8 @@ int main(int argc, char** argv) {
     
     
     string items[] = {STORE_ITEMS};
-    int prices[STORE_COUNT][4] = {{ 220, 150, 130, 180},
-                                  { 200, 155, 120, 200}};
+    int prices[STORE_COUNT][4] = {{ 190, 150, 115, 190},
+                                  { 230, 175, 120, 210}};
     
     RESTManager manager(nullptr, 0);
     manager.initStructure();

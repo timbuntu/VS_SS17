@@ -57,7 +57,9 @@ void RESTManager::initStructure() const {
         out << "HttpServerIp=127.0.0.1" << endl;
         out << "HttpServerPort=15000"   << endl;
         out << "Store1Ip=127.0.0.1"     << endl;
-        out << "Store1Port=12000";
+        out << "Store1Port=12000"       << endl;
+        out << "ExternalStoreN=0"       << endl;
+        out << "ExternalStores=127.0.0.1:12000,127.0.0.1:12000";
         out.close();
     }
     
