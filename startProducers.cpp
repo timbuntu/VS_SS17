@@ -1,5 +1,6 @@
 
 #include <thread>
+#include <iostream>
 
 #include "RESTManager.h"
 #include "Producer.h"
@@ -12,18 +13,19 @@ using namespace std;
  */
 int main(int argc, char** argv) {
     
+    mosqpp::lib_init();
     
-    RESTManager manager(nullptr, 0);
+    RESTManager manager(NULL, 0);
     manager.initStructure();
     
     const char* addr = manager.getConfig("BrokerIp").c_str();
     char* farmProducts[] = {"Milk", "Cheese"};
     char* marketProducts[] = {"Bread", "Juice"};
     
-    Producer farm1(addr, farmProducts, 2);
-    Producer farm2(addr, farmProducts, 2);
-    Producer market1(addr, marketProducts, 2);
-    Producer market2(addr, marketProducts, 2);
+    Producer farm1("farm1", addr, farmProducts, 2);
+    Producer farm2("farm2", addr, farmProducts, 2);
+    Producer market1("markt1", addr, marketProducts, 2);
+    Producer market2("markt2", addr, marketProducts, 2);
     
     thread tFarm1(&Producer::start, &farm1);
     thread tFarm2(&Producer::start, &farm2);

@@ -7,11 +7,21 @@
 
 #include "MQTTClient.h"
 
-MQTTClient::MQTTClient(const char* addr) {
-    mosqpp::lib_init();
-    connected = (connect_async(addr) == MOSQ_ERR_SUCCESS);
+MQTTClient::MQTTClient(const char* id, const char* addr)
+{
+    client = mosquitto_new(id, true, NULL);
+    
+    mosquitto_message_callback_set(client, on_message);
+    mosquitto_subscribe_callback_set(client, on_subscribe);
+    
+    mosquitto_threaded_set(client, true);
+    mosquitto_loop_start(client);
+    
+    int ret = mosquitto_connect_async(client, addr, 1883, 60);
+    connected = (ret == MOSQ_ERR_SUCCESS);
     if(!connected)
-        printf("Connecting to broker failed\n");
+        printf("Connecting to broker at %s failed: %d\n", addr, ret);
+    
 }
 
 MQTTClient::MQTTClient(const MQTTClient& orig) {
@@ -23,7 +33,7 @@ MQTTClient::~MQTTClient() {
 bool MQTTClient::subscribe(char* channel) {
     bool success = false;
     if(connected)
-        success = mosqpp::mosquittopp::subscribe(nullptr, channel) == MOSQ_ERR_SUCCESS;
+        success = mosquitto_subscribe(client, nullptr, channel, 0) == MOSQ_ERR_SUCCESS;
     else
         printf("Not connected\n");
     
@@ -33,18 +43,19 @@ bool MQTTClient::subscribe(char* channel) {
 bool MQTTClient::publish(char* channel, void* msg, int len) {
     bool success = false;
     if(connected)
-        success = mosqpp::mosquittopp::publish(nullptr, channel, len, msg) == MOSQ_ERR_SUCCESS;
+        success = mosquitto_publish(client, nullptr, channel, len, msg, 0, true) == MOSQ_ERR_SUCCESS;
     else
         printf("Not connected\n");
     
     return success;
 }
 
-void MQTTClient::on_message(const struct mosquitto_message* msg) {
-    notifyObservers(msg->payload, msg->payloadlen);
+void MQTTClient::on_message(struct mosquitto* mosq, void* data, const struct mosquitto_message* msg) {
+    //notifyObservers(msg->payload, msg->payloadlen);
+    printf("Message received");
 }
 
-void MQTTClient::on_subscribe(int mid, int qos_count, const int* granted_qos) {
+void MQTTClient::on_subscribe(struct mosquitto* mosq, void* data, int mid, int qos_count, const int* granted_qos) {
     printf("Subscribed\n");
 }
 

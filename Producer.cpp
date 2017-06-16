@@ -7,8 +7,8 @@
 
 #include "Producer.h"
 
-Producer::Producer(const char* addr, char** products, unsigned int n) {
-    this->client = new MQTTClient(addr);
+Producer::Producer(const char* id, const char* addr, char** products, unsigned int n) {
+    this->client = new MQTTClient(id, addr);
     this->products = products;
     this->n = n;
 }

@@ -9,12 +9,14 @@
 #define	PRODUCER_H
 
 #include <string.h>
+#include <stdlib.h>
+
 #include "MQTTClient.h"
 
 
 class Producer {
 public:
-    Producer(const char* addr, char** products, unsigned int n);
+    Producer(const char* id, const char* addr, char** products, unsigned int n);
     virtual ~Producer();
     
     void start();
