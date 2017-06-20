@@ -5,21 +5,29 @@
  * Created on 15. Juni 2017, 11:45
  */
 
+#include <unistd.h>
+
 #include "MQTTClient.h"
 
-MQTTClient::MQTTClient(const char* id, const char* addr)
+MQTTClient::MQTTClient(const char* id, const char* const addr, MosqCallback* callback)
 {
-    client = mosquitto_new(id, true, NULL);
+    client = mosquitto_new(id, true, (void*)callback);
     
     mosquitto_message_callback_set(client, on_message);
     mosquitto_subscribe_callback_set(client, on_subscribe);
+    //mosquitto_log_callback_set(client, on_log);
     
-    mosquitto_threaded_set(client, true);
-    mosquitto_loop_start(client);
+    //mosquitto_threaded_set(client, true);
+    //mosquitto_loop_start(client);
     
-    int ret = mosquitto_connect_async(client, addr, 1883, 60);
+    printf("%s Connecting to %s (%d)\n", id, addr, addr);
+    
+    int ret = 15;
+    ret = mosquitto_connect(client, addr, 1883, 60);
     connected = (ret == MOSQ_ERR_SUCCESS);
-    if(!connected)
+    if(connected)
+        loop();
+    else
         printf("Connecting to broker at %s failed: %d\n", addr, ret);
     
 }
@@ -33,9 +41,14 @@ MQTTClient::~MQTTClient() {
 bool MQTTClient::subscribe(char* channel) {
     bool success = false;
     if(connected)
-        success = mosquitto_subscribe(client, nullptr, channel, 0) == MOSQ_ERR_SUCCESS;
+        success = mosquitto_subscribe(client, nullptr, channel, 1) == MOSQ_ERR_SUCCESS;
     else
         printf("Not connected\n");
+    
+    if(success)
+        loop();
+    else
+        printf("Wasn't able to subscribe to %s\n", channel);
     
     return success;
 }
@@ -43,20 +56,34 @@ bool MQTTClient::subscribe(char* channel) {
 bool MQTTClient::publish(char* channel, void* msg, int len) {
     bool success = false;
     if(connected)
-        success = mosquitto_publish(client, nullptr, channel, len, msg, 0, true) == MOSQ_ERR_SUCCESS;
+        success = mosquitto_publish(client, nullptr, channel, len, msg, 1, false) == MOSQ_ERR_SUCCESS;
     else
         printf("Not connected\n");
+    
+    if(success)
+        loop();
+    else
+        printf("Wasn't able to publish to %s\n", channel);
     
     return success;
 }
 
 void MQTTClient::on_message(struct mosquitto* mosq, void* data, const struct mosquitto_message* msg) {
     //notifyObservers(msg->payload, msg->payloadlen);
-    printf("Message received");
+    printf("Message received, topic: %s\n", msg->topic);
+    ((MosqCallback*)data)->on_mosqEvent(msg->payload);
 }
 
 void MQTTClient::on_subscribe(struct mosquitto* mosq, void* data, int mid, int qos_count, const int* granted_qos) {
     printf("Subscribed\n");
+}
+
+void MQTTClient::on_log(mosquitto* mosq, void* data, int level, const char* msg) {
+    printf("%s\n", msg);
+}
+
+void MQTTClient::loop() const {
+    mosquitto_loop(client, 1000, 1);
 }
 
 
