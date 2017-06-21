@@ -19,7 +19,7 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 
-#include "gen-cpp/Store_server.skeleton.cpp"
+#include "StoreManager.h"
 #include "Server.h"
 #include "Sensor.h"
 #include "HttpServer.h"
@@ -49,10 +49,13 @@ int main(int argc, char** argv) {
     int storePorts[STORE_COUNT+externalStoreN];
     
     //Local stores
+    StoreManager* stores[STORE_COUNT];
     int port = stoi(manager.getConfig("Store1Port"));
+    string brokerIp = manager.getConfig("BrokerIp");
     for(int i = 0; i < STORE_COUNT; i++) {
         storeIps[i] = manager.getConfig("Store1Ip");
         storePorts[i] = port++;
+        stores[i] = new StoreManager(storePorts[i], items, prices[i], sizeof(prices[i]) / sizeof(int), brokerIp, i);
     }
     
     //Exernal stores
@@ -81,7 +84,7 @@ int main(int argc, char** argv) {
     thread* storeServerThreads[STORE_COUNT];
     
     for(int i = 0; i < STORE_COUNT; i++) {
-        storeServerThreads[i] = new thread(StoreHandler::startStoreServer, storePorts[i], items, prices[i], sizeof(prices[i]) / sizeof(int));
+        storeServerThreads[i] = new thread(&StoreManager::startLoop, stores[i]);
     }
     
     sleep(1);

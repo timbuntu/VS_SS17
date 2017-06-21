@@ -21,11 +21,10 @@
 class MQTTClient {
 public:
     MQTTClient(const char* id, const char* const addr, MosqCallback* callback);
-    MQTTClient(const MQTTClient& orig);
     virtual ~MQTTClient();
     
-    bool subscribe(char* channel);
-    bool publish(char* channel, void* msg, int len);
+    bool subscribe(const char* channel);
+    bool publish(const char* channel, void* msg, int len);
     
     static void on_message(struct mosquitto* mosq, void* data, const struct mosquitto_message* msg);
     static void on_subscribe(struct mosquitto* mosq, void* data, int mid, int qos_count, const int * granted_qos);

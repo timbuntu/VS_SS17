@@ -23,11 +23,6 @@ void Producer::start() {
         strcpy(channel, DEMAND_PREFIX);
         strcat(channel, products[i]);
         client->subscribe(channel);
-        //MQTTClient::Offer offer;
-        //strncpy(offer.item, products[i], MAX_ITEM_LEN);
-        //offer.price = 100;
-        //offer.amount = 50;
-        //client->publish(channel, &offer, sizeof(MQTTClient::Offer));
         free(channel);
     }
     while(true) {

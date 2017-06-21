@@ -1,4 +1,4 @@
-classes=../Sensor.cpp ../Server.cpp ../HttpServer.cpp ../RESTManager.cpp ../gen-cpp/*
+classes=../Sensor.cpp ../Server.cpp ../HttpServer.cpp ../RESTManager.cpp ../Producer.cpp ../StoreManager.cpp ../gen-cpp/*
 src=../main.cpp $(classes)
 srcServer=../startServer.cpp $(classes)
 srcClient=../startSensors.cpp $(classes)

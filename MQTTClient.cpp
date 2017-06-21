@@ -32,13 +32,10 @@ MQTTClient::MQTTClient(const char* id, const char* const addr, MosqCallback* cal
     
 }
 
-MQTTClient::MQTTClient(const MQTTClient& orig) {
-}
-
 MQTTClient::~MQTTClient() {
 }
 
-bool MQTTClient::subscribe(char* channel) {
+bool MQTTClient::subscribe(const char* channel) {
     bool success = false;
     if(connected)
         success = mosquitto_subscribe(client, nullptr, channel, 1) == MOSQ_ERR_SUCCESS;
@@ -53,7 +50,7 @@ bool MQTTClient::subscribe(char* channel) {
     return success;
 }
 
-bool MQTTClient::publish(char* channel, void* msg, int len) {
+bool MQTTClient::publish(const char* channel, void* msg, int len) {
     bool success = false;
     if(connected)
         success = mosquitto_publish(client, nullptr, channel, len, msg, 1, false) == MOSQ_ERR_SUCCESS;
