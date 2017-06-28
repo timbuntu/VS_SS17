@@ -1,6 +1,7 @@
 custom/server
 custom/client
 custom/store
+custom/producer
 custom/serverClient
 custom/test
 custom/stressTest

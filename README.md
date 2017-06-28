@@ -11,12 +11,12 @@ runTest: build and run the tests
 test: build the tests
 server: build the server
 client: build the client
-serverClient: build an application containing server and client
+store: build stores
+producer: build producers
+serverClient: build an application containing all servers and clients
 clean: remove build-files
 
-Configure ip and port used for run-targets using IP=x.x.x.x and PORT=x
-
-The executables can be provided with a ip and port as commandline options.
+Configuration file can be found in res/config relative to execution path
 
 Configuration for netbeans:
 Exclude startServer.cpp and startSensors.cpp from build, 

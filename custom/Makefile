@@ -1,16 +1,19 @@
-classes=../Sensor.cpp ../Server.cpp ../HttpServer.cpp ../RESTManager.cpp ../Producer.cpp ../StoreManager.cpp ../gen-cpp/*
+classes=../Sensor.cpp ../Server.cpp ../HttpServer.cpp ../RESTManager.cpp ../Producer.cpp ../StoreManager.cpp ../MQTTClient.cpp ../gen-cpp/*
 src=../main.cpp $(classes)
 srcServer=../startServer.cpp $(classes)
 srcClient=../startSensors.cpp $(classes)
 srcStore=../startStore.cpp $(classes)
+srcProducer=../startProducers.cpp $(classes)
 srcTest=../tests/Test.cpp $(classes)
 srcStressTest=../tests/StressTest.cpp $(classes)
 
-compileCommand=g++ -std=c++11 -pthread -lthrift
+compileCommand=g++ -std=c++11 -pthread -lthrift -lmosquitto
 
-all:runTest server client serverClient
+default:notest
 
-notest:server client serverClient
+all:runTest runStressTest notest
+
+notest:server client serverClient store producer
 
 run:serverClient
 	./serverClient $(IP) $(PORT)
@@ -45,8 +48,11 @@ client:$(srcClient)
 store:$(srcStore)
 	$(compileCommand) $(srcStore) -o store
 
+producer:$(srcProducer)
+	$(compileCommand) $(srcProducer) -o producer
+
 serverClient:$(src)
 	$(compileCommand) $(src) -o serverClient
 
 clean:
-	rm -f server client store serverClient test stressTest res/*
+	rm -f server client store producer serverClient test stressTest res/*
