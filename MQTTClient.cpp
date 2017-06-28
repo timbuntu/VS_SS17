@@ -5,16 +5,22 @@
  * Created on 15. Juni 2017, 11:45
  */
 
-#include <unistd.h>
-
 #include "MQTTClient.h"
+
+bool MQTTClient::lib_initialized = false;
 
 MQTTClient::MQTTClient(const char* id, const char* const addr, MosqCallback* callback)
 {
+    
+    if(!lib_initialized) {
+        mosquitto_lib_init();
+        lib_initialized = true;
+    }
+    this->id = strdup(id);
     client = mosquitto_new(id, true, (void*)callback);
     
     mosquitto_message_callback_set(client, on_message);
-    mosquitto_subscribe_callback_set(client, on_subscribe);
+    //mosquitto_subscribe_callback_set(client, on_subscribe);
     //mosquitto_log_callback_set(client, on_log);
     
     //mosquitto_threaded_set(client, true);
@@ -33,6 +39,7 @@ MQTTClient::MQTTClient(const char* id, const char* const addr, MosqCallback* cal
 }
 
 MQTTClient::~MQTTClient() {
+    free(id);
 }
 
 bool MQTTClient::subscribe(const char* channel) {
@@ -42,9 +49,7 @@ bool MQTTClient::subscribe(const char* channel) {
     else
         printf("Not connected\n");
     
-    if(success)
-        loop();
-    else
+    if(!success)
         printf("Wasn't able to subscribe to %s\n", channel);
     
     return success;
@@ -57,18 +62,15 @@ bool MQTTClient::publish(const char* channel, void* msg, int len) {
     else
         printf("Not connected\n");
     
-    if(success)
-        loop();
-    else
+    if(!success)
         printf("Wasn't able to publish to %s\n", channel);
     
     return success;
 }
 
 void MQTTClient::on_message(struct mosquitto* mosq, void* data, const struct mosquitto_message* msg) {
-    //notifyObservers(msg->payload, msg->payloadlen);
-    printf("Message received, topic: %s\n", msg->topic);
-    ((MosqCallback*)data)->on_mosqEvent(msg->payload);
+    //printf("Message received, topic: %s\n", msg->topic);
+    ((MosqCallback*)data)->on_mosqEvent(msg->topic, msg->payload);
 }
 
 void MQTTClient::on_subscribe(struct mosquitto* mosq, void* data, int mid, int qos_count, const int* granted_qos) {
@@ -80,9 +82,14 @@ void MQTTClient::on_log(mosquitto* mosq, void* data, int level, const char* msg)
 }
 
 void MQTTClient::loop() const {
+    //printf("Entering loop\n");
     mosquitto_loop(client, 1000, 1);
+    //printf("Leaving loop\n");
 }
 
+const char* MQTTClient::getID() const {
+    return id;
+}
 
 void MQTTClient::addObserver(void(*observer)(void*, int)) {
     observers.push_back(observer);

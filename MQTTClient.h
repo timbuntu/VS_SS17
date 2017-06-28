@@ -10,10 +10,15 @@
 
 #include <cstdio>
 #include <vector>
+#include <unistd.h>
+#include <string.h>
+#include <stdlib.h>
 
 #include <mosquitto.h>
 #include "MosqCallback.h"
 
+#define ORDER_CHANNEL "order"
+#define CONFIRM_CHANNEL "confirm"
 #define DEMAND_PREFIX "demand/"
 #define OFFER_PREFIX "offer/"
 #define MAX_ITEM_LEN 16
@@ -35,6 +40,8 @@ public:
     
     void loop() const;
     
+    const char* getID() const;
+    
     struct Offer {
         char item[MAX_ITEM_LEN];
         unsigned int price;
@@ -42,6 +49,8 @@ public:
     };
     
 private:
+    static bool lib_initialized;
+    char* id;
     bool connected;
     mosquitto* client;
     std::vector<void(*)(void*, int)> observers;

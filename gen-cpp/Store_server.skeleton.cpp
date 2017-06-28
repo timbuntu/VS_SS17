@@ -21,8 +21,9 @@ public:
     StoreHandler() {
     }
 
-    StoreHandler(std::map<std::string, unsigned int>* itemPrices, std::vector<Order>* orders) {
+    StoreHandler(std::map<std::string, unsigned int>* itemPrices, std::map<std::string, unsigned int>* itemStock, std::vector<Order>* orders) {
         
+        this->itemStock = itemStock;
         this->itemPrices = itemPrices;
         this->orders = orders;
         
@@ -42,12 +43,13 @@ public:
         bool success = false;
         auto it = itemPrices->find(item);
         
-        if(it != itemPrices->end()) {
+        if(it != itemPrices->end() && itemStock->at(it->first) >= amount) {
             Order order;
             order.item = it->first;
             order.price = it->second;
             order.amount = amount;
             order.total = order.price * order.amount;
+            itemStock->at(order.item) -= order.amount;
             orders->push_back(order);
             success = true;
         }
@@ -61,8 +63,8 @@ public:
         //printf("getReceipt\n");
     }
 
-    static TServer& startStoreServer(int port, std::map<std::string, unsigned int>* itemPrices, std::vector<Order>* orders) {
-        shared_ptr<StoreHandler> handler(new StoreHandler(itemPrices, orders));
+    static TServer& startStoreServer(int port, std::map<std::string, unsigned int>* itemPrices, std::map<std::string, unsigned int>* itemStock, std::vector<Order>* orders) {
+        shared_ptr<StoreHandler> handler(new StoreHandler(itemPrices, itemStock, orders));
         shared_ptr<TProcessor> processor(new StoreProcessor(handler));
         shared_ptr<TServerTransport> serverTransport(new TServerSocket(port));
         shared_ptr<TTransportFactory> transportFactory(new TBufferedTransportFactory());
@@ -77,6 +79,7 @@ public:
 
 private:
     std::map<std::string, unsigned int>* itemPrices;
+    std::map<std::string, unsigned int>* itemStock;
     std::vector<Order>* orders;
 
 };

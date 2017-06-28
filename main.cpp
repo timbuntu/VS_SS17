@@ -23,6 +23,7 @@
 #include "Server.h"
 #include "Sensor.h"
 #include "HttpServer.h"
+#include "Producer.h"
 
 #define DEFAULT_PORT 27015
 #define STORE_COUNT 2
@@ -100,6 +101,26 @@ int main(int argc, char** argv) {
     
     for(int i = 0; i < 4; i++)
         sensorThreads[i] = new thread(&Sensor::send, sensors[i]);
+    
+    const char* const addr_broker = manager.getConfig("BrokerIp").c_str();
+    const char* farmProducts[] = {"Milk", "Cheese"};
+    const char* marketProducts[] = {"Bread", "Juice"};
+    
+    Producer farm1("farm1", addr_broker, farmProducts, 2);
+    Producer farm2("farm2", addr_broker, farmProducts, 2);
+    Producer market1("markt1", addr_broker, marketProducts, 2);
+    Producer market2("markt2", addr_broker, marketProducts, 2);
+    
+    
+    thread tFarm1(&Producer::start, &farm1);
+    thread tFarm2(&Producer::start, &farm2);
+    thread tMarket1(&Producer::start, &market1);
+    thread tMarket2(&Producer::start, &market2);
+    
+    tFarm1.join();
+    tFarm2.join();
+    tMarket1.join();
+    tMarket2.join();
     
     for(int i = 0; i < 4; i++)
         sensorThreads[i]->join();

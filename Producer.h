@@ -23,10 +23,11 @@ public:
     
     void start();
     
-    void on_mosqEvent(const void* msg);
+    void on_mosqEvent(const char* channel, const void* msg);
     
 private:
     MQTTClient* client;
+    MQTTClient::Offer lastOffer;
     const char** products;
     unsigned int n;
 };

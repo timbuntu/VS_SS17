@@ -10,7 +10,7 @@
 
 class MosqCallback {
 public:
-    virtual void on_mosqEvent(const void* msg) = 0;
+    virtual void on_mosqEvent(const char* channel, const void* msg) = 0;
 };
 
 #endif	/* MOSQCALLBACK_H */

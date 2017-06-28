@@ -56,11 +56,11 @@ void RESTManager::initStructure() const {
         out << "ServerPort=27015"       << endl;
         out << "HttpServerIp=127.0.0.1" << endl;
         out << "HttpServerPort=15000"   << endl;
-        out << "Store1Ip=127.0.0.1"     << endl;
+        out << "Store1Ip=localhost"     << endl;
         out << "Store1Port=12000"       << endl;
         out << "ExternalStoreN=0"       << endl;
         out << "ExternalStores=127.0.0.1:12000,127.0.0.1:12000" << endl;
-        out << "BrokerIp=127.0.0.1";
+        out << "BrokerIp=localhost";
         out.close();
     }
     
