@@ -7,19 +7,19 @@
 
 #include "StoreManager.h"
 
-StoreManager::StoreManager(int port, std::string* items, int* prices, unsigned long n, std::string brokerIp, int clientID) 
-: client(std::string("store" + std::to_string(clientID)).c_str(), brokerIp.c_str(), this)
+StoreManager::StoreManager(int port, std::string* items, int* prices, unsigned long n, std::string brokerIp, int clientID, int startStock) 
+: client(std::string("store" + std::to_string(clientID)).c_str(), brokerIp.c_str(), this), stop(false)
 {
     
     for (int i = 0; i < n; i++) {
         itemPrices.insert(std::pair<std::string, int>(items[i], prices[i]));
-        itemStock.insert(std::pair<std::string, int>(items[i], INITIAL_STOCK));
-        offersSent.insert(std::pair<std::string, int>(items[i], 0));
+        itemStock.insert(std::pair<std::string, int>(items[i], startStock));
+        demandCount.insert(std::pair<std::string, int>(items[i], 0));
         client.subscribe(std::string(OFFER_PREFIX + items[i]).c_str());
     }
     client.subscribe(CONFIRM_CHANNEL);
     
-    serverThread = new std::thread(StoreHandler::startStoreServer, port, &itemPrices, &itemStock, &orders);
+    serverThread = new std::thread(StoreHandler::startStoreServer, port, &itemPrices, &itemStock, &ordersReceived);
 }
 
 StoreManager::~StoreManager() {
@@ -29,21 +29,24 @@ StoreManager::~StoreManager() {
 void StoreManager::startLoop() {
     
     while(true) {
+        if(stop)
+            exit(EXIT_SUCCESS);
+        
         client.loop();
         for(auto i = itemStock.cbegin(); i != itemStock.cend(); i++) {
             std::string item = i->first;
             unsigned int stock = i->second;
             
             if(stock < INITIAL_STOCK*0.8) {
-                if(offersSent.at(item) % OFFER_DELAY == 0) {
+                if(demandCount.at(item) % OFFER_DELAY == 0) {
                     MQTTClient::Offer offer;
                     strncpy(offer.item, item.c_str(), MAX_ITEM_LEN);
-                    offer.price = itemPrices.at(item)/2 + (offersSent.at(item)/OFFER_DELAY)*PRICE_INCREASE;
+                    offer.price = itemPrices.at(item)/2 + (demandCount.at(item)/OFFER_DELAY)*PRICE_INCREASE;
                     offer.amount = INITIAL_STOCK - stock;
                     client.publish(std::string(DEMAND_PREFIX + item).c_str(), &offer, sizeof(offer));
-                    printf("%s: Sent demand for %d %s\n", client.getID(), offer.amount, offer.item);
+                    printf("%s: Sent demand for %d %s at %d each\n", client.getID(), offer.amount, offer.item, offer.price);
                 }
-                offersSent.at(item)++;
+                demandCount.at(item)++;
             }
         }
         //printf("Store alive\n");
@@ -58,7 +61,7 @@ void StoreManager::on_mosqEvent(const char* channel, const void* msg) {
     if(strstr(channel, OFFER_PREFIX)) {
         const char* item = channel + strlen(OFFER_PREFIX);
         //printf("Received offer for %s\n", item);
-        if(!strcmp(item, offer->item) && itemStock.at(item) < INITIAL_STOCK && !isActiveOrder(offer) && offer->price <= (itemPrices.at(item)/2 + (offersSent.at(item)/OFFER_DELAY)*PRICE_INCREASE)) {
+        if(!strcmp(item, offer->item) && itemStock.at(item) < INITIAL_STOCK && !isActiveOrder(offer) && offer->price <= (itemPrices.at(item)/2 + (demandCount.at(item)/OFFER_DELAY)*PRICE_INCREASE)) {
             
             MQTTClient::Offer *order;
             if(offer->amount <= INITIAL_STOCK-itemStock.at(item))
@@ -77,18 +80,18 @@ void StoreManager::on_mosqEvent(const char* channel, const void* msg) {
                 
                 if(order->amount != offer->amount)
                     delete order;
-                printf("%s: Received offer for and ordered %d %s\n", client.getID(), order->amount, order->item);
+                printf("%s: Received offer for and ordered %d %s at %d each\n", client.getID(), order->amount, offer->item, offer->price);
             }
         }
     } else if(strstr(channel, CONFIRM_CHANNEL)) {
         if(!strncmp(offer->item, activeOrder.item, MAX_ITEM_LEN) && offer->price == activeOrder.price && offer->amount == activeOrder.amount) {
             itemStock.at(offer->item) += offer->amount;
-            offersSent.at(offer->item) = 0;
+            demandCount.at(offer->item) = 0;
             *activeOrder.item = 0;
-            printf("%s: Restocked %s by %d to %d\n", client.getID(), offer->item, offer->amount, itemStock.at(offer->item));
+            printf("%s: Restocked %s by %d to %d for %d each\n", client.getID(), offer->item, offer->amount, itemStock.at(offer->item), offer->price);
         }
     } else {
-        printf("%s: Ignored offer for %d %s\n", client.getID(), offer->amount, offer->item);
+        printf("%s: Ignored offer for %d %s at %d each\n", client.getID(), offer->amount, offer->item, offer->price);
     }
 }
 
@@ -103,4 +106,8 @@ bool StoreManager::isActiveOrder(MQTTClient::Offer* offer) const {
         equal = false;
     
     return equal;
+}
+
+void StoreManager::stopLoop() {
+    stop = true;
 }

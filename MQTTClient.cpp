@@ -16,6 +16,7 @@ MQTTClient::MQTTClient(const char* id, const char* const addr, MosqCallback* cal
         mosquitto_lib_init();
         lib_initialized = true;
     }
+    
     this->id = strdup(id);
     client = mosquitto_new(id, true, (void*)callback);
     
@@ -26,20 +27,20 @@ MQTTClient::MQTTClient(const char* id, const char* const addr, MosqCallback* cal
     //mosquitto_threaded_set(client, true);
     //mosquitto_loop_start(client);
     
-    printf("%s Connecting to %s (%d)\n", id, addr, addr);
-    
     int ret = 15;
     ret = mosquitto_connect(client, addr, 1883, 60);
     connected = (ret == MOSQ_ERR_SUCCESS);
-    if(connected)
+    if(connected) {
+        printf("%s connected to %s (%d)\n", id, addr, addr);
         loop();
+    }
     else
         printf("Connecting to broker at %s failed: %d\n", addr, ret);
     
 }
 
 MQTTClient::~MQTTClient() {
-    free(id);
+    //free(id);
 }
 
 bool MQTTClient::subscribe(const char* channel) {
@@ -67,6 +68,12 @@ bool MQTTClient::publish(const char* channel, void* msg, int len) {
     
     return success;
 }
+
+void MQTTClient::disconnect() {
+    mosquitto_disconnect(client);
+    connected = false;
+}
+
 
 void MQTTClient::on_message(struct mosquitto* mosq, void* data, const struct mosquitto_message* msg) {
     //printf("Message received, topic: %s\n", msg->topic);

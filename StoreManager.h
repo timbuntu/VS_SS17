@@ -22,10 +22,11 @@
 
 class StoreManager : public MosqCallback {
 public:
-    StoreManager(int port, std::string* items, int* prices, unsigned long n, std::string brokerIp, int clientID);
+    StoreManager(int port, std::string* items, int* prices, unsigned long n, std::string brokerIp, int clientID, int startStock = INITIAL_STOCK);
     virtual ~StoreManager();
     
     void startLoop();
+    void stopLoop();
     
     void on_mosqEvent(const char* channel, const void* msg);
     
@@ -35,11 +36,12 @@ private:
     
     std::map<std::string, unsigned int> itemPrices;
     std::map<std::string, unsigned int> itemStock;
-    std::map<std::string, unsigned int> offersSent;
-    std::vector<Order> orders;
+    std::map<std::string, unsigned int> demandCount;
+    std::vector<Order> ordersReceived;
     MQTTClient::Offer activeOrder;
     std::thread* serverThread;
     MQTTClient client;
+    bool stop;
 };
 
 #endif	/* STORE_H */

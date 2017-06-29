@@ -9,7 +9,7 @@ srcStressTest=../tests/StressTest.cpp $(classes)
 
 compileCommand=g++ -std=c++11 -pthread -lthrift -lmosquitto
 
-default:notest
+default:runTest notest
 
 all:runTest runStressTest notest
 

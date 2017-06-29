@@ -15,6 +15,7 @@
 #include "MQTTClient.h"
 #include "MosqCallback.h"
 
+#define OFFER_DELAY 10
 
 class Producer : public MosqCallback {
 public:
@@ -22,14 +23,20 @@ public:
     virtual ~Producer();
     
     void start();
+    void stop();
     
     void on_mosqEvent(const char* channel, const void* msg);
     
 private:
+    
+    void saveOffer(MQTTClient::Offer* offer);
+    
     MQTTClient* client;
     MQTTClient::Offer lastOffer;
     const char** products;
-    unsigned int n;
+    unsigned int productCount;
+    unsigned long loopCount;
+    bool stopProducer;
 };
 
 #endif	/* PRODUCER_H */

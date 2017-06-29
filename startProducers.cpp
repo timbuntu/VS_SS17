@@ -18,9 +18,11 @@ int main(int argc, char** argv) {
     RESTManager manager(NULL, 0);
     manager.initStructure();
     
-    const char* const addr = manager.getConfig("BrokerIp").c_str();
+    const char* brokerIp = manager.getConfig("BrokerIp").c_str();
     const char* farmProducts[] = {"Milk", "Cheese"};
     const char* marketProducts[] = {"Bread", "Juice"};
+    
+    char* addr = strdup(brokerIp);
     
     Producer farm1("farm1", addr, farmProducts, 2);
     Producer farm2("farm2", addr, farmProducts, 2);
@@ -46,6 +48,7 @@ int main(int argc, char** argv) {
     
     sleep(2);
     
+    free(addr);
     mosquitto_lib_cleanup();
     printf("End\n");
     

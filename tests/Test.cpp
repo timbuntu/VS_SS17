@@ -20,11 +20,14 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
-#include "../gen-cpp/Store_server.skeleton.cpp"
+
+#include "../StoreManager.h"
 #include "../Server.h"
 #include "../Sensor.h"
 #include "../RESTManager.h"
 #include "../HttpServer.h"
+#include "../MQTTClient.h"
+#include "../Producer.h"
 
 #define DEFAULT_ADDRESS "127.0.0.1"
 #define STORE_COUNT 2
@@ -37,6 +40,27 @@ bool messageReceived = false;
 timeval sent, received;
 vector<string> receivedMessages;
 
+class TestCallback : public MosqCallback {
+public:
+
+    void on_mosqEvent(const char* channel, const void* msg) {
+        cout << "Callback called" << endl;
+        
+        if(!strcmp(channel, ORDER_CHANNEL))
+            order = true;
+        else if(strstr(channel, OFFER_PREFIX))
+            offer = true;
+    }
+    
+    bool receivedOrder() const { return order; }
+    bool receivedOffer() const { return offer; }
+    
+private:
+    bool order = false;
+    bool offer = false;
+
+};
+
 bool wasMessageReceived(string message) {
     for(string receivedMessage : receivedMessages)
         if(receivedMessage == message)
@@ -48,7 +72,7 @@ bool wasMessageReceived(string message) {
 void integrityTest() {
     cout << endl << "Testing integrity of received messages" << endl;
     
-    if(!(wasMessageReceived("Käse=0") && wasMessageReceived("Bread=0") 
+    if(!(wasMessageReceived("Cheese=0") && wasMessageReceived("Bread=0") 
                                           && wasMessageReceived("Milk=0") && wasMessageReceived("Orange Juice=0"))) {
         
         cout << "Test of integrity failed" << endl;
@@ -136,6 +160,94 @@ void httpServerError(sockaddr_in addr) {
     cout << "Received error from HttpServer, test successful" << endl;
 }
 
+void producerOfferTest(string brokerIP) {
+    cout << endl << "Checking if Producer send offers" << endl;
+    
+    bool success = false;
+    TestCallback callback;
+    const char* item = "Cheese";
+    MQTTClient client("test", brokerIP.c_str(), &callback);
+    
+    if(char* channel = (char*)malloc(strlen(OFFER_PREFIX)+strlen(item)+1)) {
+        
+        strcpy(channel, OFFER_PREFIX);
+        strcat(channel, item);
+        
+        client.subscribe(channel);
+        client.loop();
+        
+        free(channel);
+        
+        if(channel = (char*)malloc(strlen(DEMAND_PREFIX)+strlen(item)+1)) {
+
+            strcpy(channel, DEMAND_PREFIX);
+            strcat(channel, item);
+
+            MQTTClient::Offer offer;
+            strncpy(offer.item, item, MAX_ITEM_LEN);
+            offer.amount = 10;
+            offer.price = 1000;
+            
+            if(client.publish(channel, &offer, sizeof(offer))) {
+                cout << "Published to " << channel << endl;
+                for(int i = 0; i < 10; i++) {
+                    client.loop();
+                    if(callback.receivedOffer()) {
+                        success = true;
+                        break;
+                    }
+                }
+            }
+            free(channel);
+        }
+    }
+    
+    if(!success) {
+        cout << "Test failed, didn't receive offer from producer" << endl;
+        exit(EXIT_FAILURE);
+    } else
+        cout << "Test successful, received offer from producer" << endl;
+}
+
+void storeOrderTest(string brokerIP) {
+    cout << endl << "Checking if Stores send orders" << endl;
+    
+    bool success = false;
+    TestCallback callback;
+    const char* item = "Cheese";
+    MQTTClient client("test", brokerIP.c_str(), &callback);
+    
+    client.subscribe(ORDER_CHANNEL);
+    client.loop();
+    if(char* channel = (char*)malloc(strlen(OFFER_PREFIX)+strlen(item)+1)) {
+        
+        strcpy(channel, OFFER_PREFIX);
+        strcat(channel, item);
+        
+        MQTTClient::Offer offer;
+        strncpy(offer.item, item, MAX_ITEM_LEN);
+        offer.amount = INITIAL_STOCK;
+        offer.price = 1;
+        if(client.publish(channel, &offer, sizeof(offer))) {
+            cout << "Published to " << channel << endl;
+            for(int i = 0; i < 10; i++) {
+                client.loop();
+                if(callback.receivedOrder()) {
+                    success = true;
+                    break;
+                }
+            }
+        }
+        free(channel);
+    }
+    
+    if(!success) {
+        cout << "Test failed, didn't receive order from store" << endl;
+        exit(EXIT_FAILURE);
+    } else
+        cout << "Test successful, received order from store" << endl;
+}
+
 int main(int argc, char** argv) {
     
     string serverIpAddress;
@@ -149,12 +261,15 @@ int main(int argc, char** argv) {
     RESTManager manager(resources, 5);
     manager.initStructure();
     
+    StoreManager* stores[STORE_COUNT];
     string storeIps[STORE_COUNT];
     int storePorts[STORE_COUNT];
     int port = stoi(manager.getConfig("Store1Port"));
+    string brokerIp = manager.getConfig("BrokerIp");
     for(int i = 0; i < STORE_COUNT; i++) {
         storeIps[i] = manager.getConfig("Store1Ip");
         storePorts[i] = port++;
+        stores[i] = new StoreManager(storePorts[i], items, prices[i], sizeof(prices[i]) / sizeof(int), brokerIp, i, INITIAL_STOCK/2);
     }
     
     sockaddr_in addr;
@@ -172,17 +287,42 @@ int main(int argc, char** argv) {
     
     thread serverThread(&Server::receive, &server);
     thread httpServerThread(&HttpServer::start, &httpServer);
+    
+    const char* farmProducts[] = {"Milk", "Cheese"};
+    const char* marketProducts[] = {"Bread", "Juice"};
+    const char* brokerAddr = brokerIp.c_str();
+    
+    Producer farm1("farm1", brokerAddr, farmProducts, 2);
+    Producer farm2("farm2", brokerAddr, farmProducts, 2);
+    Producer market1("markt1", brokerAddr, marketProducts, 2);
+    Producer market2("markt2", brokerAddr, marketProducts, 2);
+    
+    
+    thread tFarm1(&Producer::start, &farm1);
+    thread tFarm2(&Producer::start, &farm2);
+    thread tMarket1(&Producer::start, &market1);
+    thread tMarket2(&Producer::start, &market2);
+    
+    sleep(1);
+    
+    producerOfferTest(brokerIp);
+    
+    farm1.stop();
+    farm2.stop();
+    market1.stop();
+    market2.stop();
+    
     thread* storeServerThreads[STORE_COUNT];
     
     for(int i = 0; i < STORE_COUNT; i++) {
-        storeServerThreads[i] = new thread(StoreHandler::startStoreServer, storePorts[i], items, prices[i], sizeof(prices[i]) / sizeof(int));
+        storeServerThreads[i] = new thread(&StoreManager::startLoop, stores[i]);
     }
     
     sleep(1);
     
     Sensor* sensors[4];
     
-    sensors[0] = new Sensor("Käse", addr, 1, 1);
+    sensors[0] = new Sensor("Cheese", addr, 1, 1);
     sensors[1] = new Sensor("Bread", addr, 1, 1);
     sensors[2] = new Sensor("Milk", addr, 1, 1);
     sensors[3] = new Sensor("Orange Juice", addr, 1, 1);
@@ -209,19 +349,30 @@ int main(int argc, char** argv) {
     
     integrityTest();
     
-    httpResponse(addr);
+    httpResponse(addrHttpServer);
     
-    httpServerError(addr);
+    httpServerError(addrHttpServer);
     
-    cout << endl << "All tests were successful" << endl;
+    storeOrderTest(brokerIp);
+    
+    cout << endl << "===================================================" << endl;
+    cout << endl << endl << "All tests were successful" << endl << endl;
+    cout << endl << "===================================================" << endl;
+    
+    
+    for(int i = 0; i < STORE_COUNT; i++) {
+        stores[i]->stopLoop();
+        storeServerThreads[i]->join();
+    }
     
     serverThread.detach();
     httpServerThread.detach();
     
-    for(thread* thread : storeServerThreads) {
-        thread->detach();
-    }
+    tFarm1.detach();
+    tFarm2.detach();
+    tMarket1.detach();
+    tMarket2.detach();
     
-    return (EXIT_SUCCESS);
+    return EXIT_SUCCESS;
 }
 
